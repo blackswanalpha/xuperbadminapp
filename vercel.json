@@ -1,18 +1,6 @@
 {
   "version": 2,
-  "name": "xuperb-admin-app",
-  "alias": ["xuperb-admin"],
-  "regions": ["iad1"],
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm ci",
-  "devCommand": "npm run dev",
-  "functions": {
-    "src/app/api/**/*.ts": {
-      "runtime": "@vercel/node"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -61,23 +49,8 @@
       "permanent": true
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/proxy/:path*",
-      "destination": "https://your-backend-api.com/api/:path*"
-    }
-  ],
   "env": {
     "NODE_ENV": "production",
     "NEXT_TELEMETRY_DISABLED": "1"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
-  "github": {
-    "enabled": true,
-    "autoAlias": false
   }
 }
