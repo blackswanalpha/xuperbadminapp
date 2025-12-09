@@ -1,0 +1,1 @@
+Xuperb Admin Dashboard is a modern, full-featured vehicle rental management system built with Next.js 16, TypeScript, and Tailwind CSS. Features comprehensive inventory management, fleet monitoring, contract approvals, expense tracking, and advanced reporting with real-time analytics. Includes Docker & Vercel deployment support.

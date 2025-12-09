@@ -1,0 +1,433 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { fetchVehicles, Vehicle, deleteVehicle, fetchVehicleStatistics } from '@/lib/api'
+
+import { motion } from 'framer-motion'
+import { Car, Wrench, Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
+import DashboardCard from '@/components/shared/dashboard-card'
+import StatCard from '@/components/shared/stat-card'
+import { colors } from '@/lib/theme/colors'
+
+export default function FleetManagementPage() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
+  const [statistics, setStatistics] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+
+  // Filter and search states
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [classificationFilter, setClassificationFilter] = useState('ALL')
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [vehiclesData, statsData] = await Promise.all([
+          fetchVehicles(),
+          fetchVehicleStatistics().catch(() => null) // Statistics might not be available
+        ])
+        setVehicles(vehiclesData)
+        setFilteredVehicles(vehiclesData)
+        setStatistics(statsData)
+      } catch (err) {
+        setError('Failed to load vehicles')
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Filter and search effect
+  useEffect(() => {
+    if (!Array.isArray(vehicles)) return
+
+    let filtered = [...vehicles]
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(vehicle =>
+        vehicle.registration_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (vehicle.color && vehicle.color.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter(vehicle => vehicle.status === statusFilter)
+    }
+
+    // Apply classification filter
+    if (classificationFilter !== 'ALL') {
+      filtered = filtered.filter(vehicle => vehicle.classification === classificationFilter)
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue = a[sortBy as keyof Vehicle]
+      let bValue = b[sortBy as keyof Vehicle]
+
+      // Handle different data types
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+
+      if ((aValue ?? 0) < (bValue ?? 0)) return sortOrder === 'asc' ? -1 : 1
+      if ((aValue ?? 0) > (bValue ?? 0)) return sortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+
+    setFilteredVehicles(filtered)
+  }, [vehicles, searchTerm, statusFilter, classificationFilter, sortBy, sortOrder])
+
+  const handleDeleteVehicle = async () => {
+    if (!selectedVehicle) return
+
+    try {
+      await deleteVehicle(selectedVehicle.id)
+      const updatedVehicles = vehicles.filter(v => v.id !== selectedVehicle.id)
+      setVehicles(updatedVehicles)
+      setFilteredVehicles(filteredVehicles.filter(v => v.id !== selectedVehicle.id))
+      setDeleteModalOpen(false)
+      setSelectedVehicle(null)
+    } catch (error) {
+      console.error('Error deleting vehicle:', error)
+      alert('Failed to delete vehicle. Please try again.')
+    }
+  }
+
+  const stats = [
+    {
+      title: 'Total Vehicles',
+      value: statistics?.total?.toString() || (Array.isArray(vehicles) ? vehicles.length.toString() : '0'),
+      icon: Car,
+      trend: { value: '+2', isPositive: true },
+      color: colors.adminPrimary,
+    },
+    {
+      title: 'Available',
+      value: statistics?.available?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => v.status === 'AVAILABLE').length.toString() : '0'),
+      icon: Car,
+      trend: { value: '+3', isPositive: true },
+      color: colors.adminSuccess,
+    },
+    {
+      title: 'Hired',
+      value: statistics?.hired?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => v.status === 'HIRED').length.toString() : '0'),
+      icon: Car,
+      trend: { value: `${statistics?.hired || 0}/${statistics?.total || vehicles.length}`, isPositive: true },
+      color: colors.adminPrimary,
+    },
+    {
+      title: 'In Garage',
+      value: statistics?.in_garage?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => v.status === 'IN_GARAGE').length.toString() : '0'),
+      icon: Wrench,
+      trend: { value: '-1', isPositive: true },
+      color: colors.adminWarning,
+    },
+  ]
+
+  return (
+
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      {/* Page Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: colors.textPrimary }}>
+            Fleet Management
+          </h1>
+          <p style={{ color: colors.textSecondary }}>
+            Manage vehicles, track expenses, and monitor maintenance
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.href = '/admin/fleet-management/create'}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: colors.adminPrimary }}
+        >
+          <Plus size={20} />
+          Add Vehicle
+        </button>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.1, duration: 0.5 }}
+          >
+            <StatCard {...stat} />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Vehicles Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.6 }}
+      >
+        <DashboardCard
+          title="Vehicle Fleet"
+          subtitle="All registered vehicles"
+          action={
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Search Input */}
+              <div className="relative">
+                <Search
+                  size={18}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2"
+                  style={{ color: colors.textTertiary }}
+                />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search vehicles..."
+                  className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm w-64"
+                  style={{ borderColor: colors.borderLight }}
+                />
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm"
+                style={{ borderColor: colors.borderLight }}
+              >
+                <option value="ALL">All Status</option>
+                <option value="AVAILABLE">Available</option>
+                <option value="HIRED">Hired</option>
+                <option value="IN_GARAGE">In Garage</option>
+                <option value="UNAVAILABLE">Unavailable</option>
+              </select>
+
+              {/* Classification Filter */}
+              <select
+                value={classificationFilter}
+                onChange={(e) => setClassificationFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm"
+                style={{ borderColor: colors.borderLight }}
+              >
+                <option value="ALL">All Types</option>
+                <option value="INTERNAL">Internal</option>
+                <option value="EXTERNAL">External</option>
+              </select>
+
+              {/* Sort Options */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm"
+                  style={{ borderColor: colors.borderLight }}
+                >
+                  <option value="created_at">Date Added</option>
+                  <option value="make">Make</option>
+                  <option value="model">Model</option>
+                  <option value="year">Year</option>
+                  <option value="registration_number">Registration</option>
+                  <option value="status">Status</option>
+                </select>
+
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors text-sm"
+                  style={{ borderColor: colors.borderLight }}
+                  title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              </div>
+
+              {/* Clear Filters Button */}
+              {(searchTerm || statusFilter !== 'ALL' || classificationFilter !== 'ALL') && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('')
+                    setStatusFilter('ALL')
+                    setClassificationFilter('ALL')
+                  }}
+                  className="px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                  style={{ color: colors.textSecondary }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          }
+        >
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="p-8 text-center text-gray-500">Loading vehicles...</div>
+            ) : error ? (
+              <div className="p-8 text-center text-red-500">{error}</div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: colors.borderLight }}>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Vehicle ID
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Make & Model
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Registration Number
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Classification
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Status
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.isArray(filteredVehicles) && filteredVehicles.map((vehicle, index) => (
+                    <motion.tr
+                      key={vehicle.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.1, duration: 0.5 }}
+                      className="border-b hover:bg-gray-50 transition-colors cursor-pointer"
+                      style={{ borderColor: colors.borderLight }}
+                    >
+                      <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
+                        #{vehicle.id}
+                      </td>
+                      <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
+                        {vehicle.make} {vehicle.model}
+                      </td>
+                      <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
+                        {vehicle.registration_number}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor: vehicle.classification === 'EXTERNAL' ? `${colors.adminPrimary}20` : `${colors.adminAccent}20`,
+                            color: vehicle.classification === 'EXTERNAL' ? colors.adminPrimary : colors.adminAccent,
+                          }}
+                        >
+                          {vehicle.classification}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor:
+                              vehicle.status === 'AVAILABLE'
+                                ? `${colors.adminSuccess}20`
+                                : vehicle.status === 'ON_TRIP'
+                                  ? `${colors.adminPrimary}20`
+                                  : `${colors.adminWarning}20`,
+                            color:
+                              vehicle.status === 'AVAILABLE'
+                                ? colors.adminSuccess
+                                : vehicle.status === 'ON_TRIP'
+                                  ? colors.adminPrimary
+                                  : colors.adminWarning,
+                          }}
+                        >
+                          {vehicle.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => window.location.href = `/admin/fleet-management/${vehicle.id}`}
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            title="View Details"
+                          >
+                            <Eye size={16} style={{ color: colors.adminPrimary }} />
+                          </button>
+                          <button
+                            onClick={() => window.location.href = `/admin/fleet-management/${vehicle.id}/edit`}
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            title="Edit Vehicle"
+                          >
+                            <Edit size={16} style={{ color: colors.adminAccent }} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedVehicle(vehicle)
+                              setDeleteModalOpen(true)
+                            }}
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            title="Delete Vehicle"
+                          >
+                            <Trash2 size={16} style={{ color: colors.adminError }} />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </DashboardCard>
+      </motion.div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && selectedVehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
+              Confirm Delete
+            </h3>
+            <p className="mb-6" style={{ color: colors.textSecondary }}>
+              Are you sure you want to delete vehicle "{selectedVehicle.make} {selectedVehicle.model}"
+              (Registration: {selectedVehicle.registration_number})? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setDeleteModalOpen(false)
+                  setSelectedVehicle(null)
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                style={{ color: colors.textSecondary }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteVehicle}
+                className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: colors.adminError }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+
+  )
+}
+
