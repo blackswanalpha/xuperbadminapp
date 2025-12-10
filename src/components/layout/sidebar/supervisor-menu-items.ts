@@ -18,6 +18,7 @@ import {
   Settings,
   History,
   FileBarChart,
+  Activity,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -43,6 +44,12 @@ export const supervisorMenuItems: MenuItem[] = [
     title: 'Dashboard',
     icon: LayoutDashboard,
     href: '/supervisor',
+  },
+  {
+    id: 'tracking-overview',
+    title: 'Tracking Overview',
+    icon: Activity,
+    href: '/supervisor/tracking-overview',
   },
   {
     id: 'approval-section',

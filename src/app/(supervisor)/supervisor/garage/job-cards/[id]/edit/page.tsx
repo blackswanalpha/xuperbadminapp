@@ -2,14 +2,53 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { motion } from 'framer-motion'
+import {
+    ArrowLeft,
+    Save,
+    X,
+    User,
+    Car,
+    FileText,
+    Wrench
+} from 'lucide-react'
 import { fetchJobCard, updateJobCard, JobCard } from '@/lib/api'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
+import DashboardCard from '@/components/shared/dashboard-card'
+import { colors } from '@/lib/theme/colors'
 import { useToast } from '@/components/ui/use-toast'
+
+// Helper component for form fields
+const FormField = ({ label, id, children, required }: any) => (
+    <div className="space-y-2">
+        <label htmlFor={id} className="text-sm font-medium text-gray-700 flex">
+            {label} {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        {children}
+    </div>
+)
+
+const Input = ({ ...props }) => (
+    <input
+        className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+        {...props}
+    />
+)
+
+const Select = ({ children, ...props }: any) => (
+    <div className="relative">
+        <select
+            className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 appearance-none transition-all"
+            {...props}
+        >
+            {children}
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+    </div>
+)
 
 export default function EditJobCardPage() {
     const router = useRouter()
@@ -40,14 +79,14 @@ export default function EditJobCardPage() {
                 const data = await fetchJobCard(Number(id))
                 setFormData({
                     client_name: data.client_name,
-                    client_phone: data.client_phone,
-                    client_email: data.client_email,
+                    client_phone: data.client_phone || '',
+                    client_email: data.client_email || '',
                     registration_number: data.registration_number,
-                    make: data.make,
-                    model: data.model,
-                    speedometer_reading: data.speedometer_reading,
-                    fuel_tank_level: data.fuel_tank_level,
-                    estimated_cost: data.estimated_cost,
+                    make: data.make || '',
+                    model: data.model || '',
+                    speedometer_reading: data.speedometer_reading || '',
+                    fuel_tank_level: data.fuel_tank_level || '',
+                    estimated_cost: data.estimated_cost || 0,
                     status: data.status,
                     payment_status: data.payment_status
                 })
@@ -96,60 +135,82 @@ export default function EditJobCardPage() {
         }
     }
 
-    if (loading) return <div className="p-8">Loading...</div>
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
 
     return (
-        <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <div className="flex items-center space-x-2">
-                <Link href={`/supervisor/garage/job-cards/${id}`}>
-                    <Button variant="ghost" size="icon">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                </Link>
-                <h2 className="text-3xl font-bold tracking-tight">Edit Job Card</h2>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+        >
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <ArrowLeft className="text-gray-500" size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-3xl font-bold" style={{ color: colors.textPrimary }}>
+                            Edit Job Card
+                        </h1>
+                        <p style={{ color: colors.textSecondary }}>
+                            Update job details, client info, and vehicle status
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.back()}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    >
+                        <X size={18} />
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 font-medium"
+                        style={{ backgroundColor: colors.supervisorPrimary }}
+                    >
+                        <Save size={18} />
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Job Card Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Column 1: Client & Vehicle Info */}
+                <div className="space-y-6 lg:col-span-2">
+                    <DashboardCard
+                        title="Vehicle Information"
+                        subtitle="Vehicle details and current condition"
+                    >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="client_name">Client Name</Label>
-                                <Input id="client_name" name="client_name" value={formData.client_name} onChange={handleChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="client_phone">Client Phone</Label>
-                                <Input id="client_phone" name="client_phone" value={formData.client_phone} onChange={handleChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="client_email">Client Email</Label>
-                                <Input id="client_email" name="client_email" type="email" value={formData.client_email} onChange={handleChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="registration_number">Registration Number</Label>
-                                <Input id="registration_number" name="registration_number" value={formData.registration_number} onChange={handleChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="make">Car Make</Label>
-                                <Input id="make" name="make" value={formData.make} onChange={handleChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="model">Car Model</Label>
-                                <Input id="model" name="model" value={formData.model} onChange={handleChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="speedometer_reading">Speedometer Reading (KM)</Label>
-                                <Input id="speedometer_reading" name="speedometer_reading" type="number" value={formData.speedometer_reading} onChange={handleChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="fuel_tank_level">Fuel Tank Level</Label>
-                                <select
+                            <FormField label="Registration Number" id="registration_number" required>
+                                <Input
+                                    id="registration_number"
+                                    name="registration_number"
+                                    value={formData.registration_number}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </FormField>
+                            <FormField label="Fuel Tank Level" id="fuel_tank_level">
+                                <Select
                                     id="fuel_tank_level"
                                     name="fuel_tank_level"
-                                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     value={formData.fuel_tank_level}
                                     onChange={handleChange}
                                 >
@@ -159,18 +220,79 @@ export default function EditJobCardPage() {
                                     <option value="1/2">1/2</option>
                                     <option value="3/4">3/4</option>
                                     <option value="F">Full</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="estimated_cost">Estimated Cost</Label>
-                                <Input id="estimated_cost" name="estimated_cost" type="number" value={formData.estimated_cost} onChange={handleChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="status">Status</Label>
-                                <select
+                                </Select>
+                            </FormField>
+                            <FormField label="Make" id="make" required>
+                                <Input
+                                    id="make"
+                                    name="make"
+                                    value={formData.make}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </FormField>
+                            <FormField label="Model" id="model" required>
+                                <Input
+                                    id="model"
+                                    name="model"
+                                    value={formData.model}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </FormField>
+                            <FormField label="Speedometer (KM)" id="speedometer_reading">
+                                <Input
+                                    id="speedometer_reading"
+                                    name="speedometer_reading"
+                                    type="number"
+                                    value={formData.speedometer_reading}
+                                    onChange={handleChange}
+                                />
+                            </FormField>
+                        </div>
+                    </DashboardCard>
+
+                    <DashboardCard title="Client Information" subtitle="Contact details">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField label="Client Name" id="client_name" required>
+                                <Input
+                                    id="client_name"
+                                    name="client_name"
+                                    value={formData.client_name}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </FormField>
+                            <FormField label="Phone Number" id="client_phone" required>
+                                <Input
+                                    id="client_phone"
+                                    name="client_phone"
+                                    value={formData.client_phone}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </FormField>
+                            <FormField label="Email Address" id="client_email">
+                                <Input
+                                    id="client_email"
+                                    name="client_email"
+                                    type="email"
+                                    value={formData.client_email}
+                                    onChange={handleChange}
+                                />
+                            </FormField>
+                        </div>
+                    </DashboardCard>
+                </div>
+
+                {/* Column 2: Job Details & Status */}
+                <div className="space-y-6">
+                    <DashboardCard title="Job Details" subtitle="Status and cost estimation">
+                        <div className="space-y-4">
+                            <FormField label="Current Status" id="status">
+                                <Select
                                     id="status"
                                     name="status"
-                                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     value={formData.status}
                                     onChange={handleChange}
                                 >
@@ -179,19 +301,27 @@ export default function EditJobCardPage() {
                                     <option value="in_progress">In Progress</option>
                                     <option value="completed">Completed</option>
                                     <option value="cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
+                                </Select>
+                            </FormField>
 
-                        <div className="flex justify-end space-x-2">
-                            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-                            <Button type="submit" disabled={saving}>
-                                {saving ? 'Saving...' : 'Save Changes'}
-                            </Button>
+                            <FormField label="Estimated Cost (KES)" id="estimated_cost">
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">KES</span>
+                                    <Input
+                                        id="estimated_cost"
+                                        name="estimated_cost"
+                                        type="number"
+                                        className="pl-12"
+                                        value={formData.estimated_cost}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </FormField>
                         </div>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
+                    </DashboardCard>
+                </div>
+
+            </form>
+        </motion.div>
     )
 }

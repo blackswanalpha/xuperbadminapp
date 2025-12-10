@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  X, 
-  Download, 
-  FileText, 
-  Calendar, 
+import {
+  X,
+  Download,
+  FileText,
+  Calendar,
   Filter,
   BarChart3,
   PieChart,
@@ -34,16 +34,16 @@ interface ReportGeneratorModalProps {
   onClose: () => void
 }
 
-export default function ReportGeneratorModal({ 
-  reportType, 
-  initialDateRange, 
-  onClose 
+export default function ReportGeneratorModal({
+  reportType,
+  initialDateRange,
+  onClose
 }: ReportGeneratorModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [reportData, setReportData] = useState<any>(null)
   const [exporting, setExporting] = useState<string | null>(null)
-  
+
   const [filters, setFilters] = useState({
     start_date: initialDateRange.start_date,
     end_date: initialDateRange.end_date,
@@ -136,7 +136,7 @@ export default function ReportGeneratorModal({
 
     try {
       setExporting(format)
-      
+
       const exportData = {
         type: reportType,
         data: reportData,
@@ -200,7 +200,7 @@ export default function ReportGeneratorModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 content-center"
       onClick={onClose}
     >
       <motion.div
@@ -213,7 +213,7 @@ export default function ReportGeneratorModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: colors.borderLight }}>
           <div className="flex items-center gap-3">
-            <div 
+            <div
               className="w-12 h-12 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: `${config.color}20` }}
             >
@@ -368,7 +368,7 @@ export default function ReportGeneratorModal({
                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
                     <span className="text-green-600 font-medium">Report generated successfully</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {reportType === 'inventory' && reportData.total_items && (
                       <>
@@ -398,7 +398,7 @@ export default function ReportGeneratorModal({
                         </div>
                       </>
                     )}
-                    
+
                     {reportType === 'vehicle-utilization' && reportData.summary && (
                       <>
                         <div className="text-center p-3 rounded-lg border" style={{ borderColor: colors.borderLight }}>
@@ -428,10 +428,10 @@ export default function ReportGeneratorModal({
                       </>
                     )}
                   </div>
-                  
+
                   <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
                     <p className="text-blue-800 text-sm">
-                      <strong>Note:</strong> This is a preview of the report data. 
+                      <strong>Note:</strong> This is a preview of the report data.
                       Export to PDF or Excel to get the complete formatted report with charts and detailed analysis.
                     </p>
                   </div>

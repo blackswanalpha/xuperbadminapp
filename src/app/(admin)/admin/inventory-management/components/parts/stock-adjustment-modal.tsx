@@ -24,7 +24,7 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [refreshedPart, setRefreshedPart] = useState<Part>(part)
-  
+
   // Form data
   const [formData, setFormData] = useState({
     adjustment_type: 'PURCHASE' as 'PURCHASE' | 'RETURN' | 'CORRECTION' | 'DAMAGE' | 'LOSS',
@@ -62,7 +62,7 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.quantity || parseInt(formData.quantity) <= 0) {
       setError('Please enter a valid quantity')
       return
@@ -73,7 +73,7 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
       setError('Cannot adjust more stock out than currently available')
       return
     }
-    
+
     try {
       setSaving(true)
       setError(null)
@@ -101,7 +101,7 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
     const quantity = parseInt(formData.quantity) || 0
     const currentStock = refreshedPart.current_stock
     const selectedOption = adjustmentOptions.find(opt => opt.value === formData.adjustment_type)
-    
+
     if (selectedOption?.type === 'IN') {
       return currentStock + quantity
     } else if (selectedOption?.type === 'OUT') {
@@ -127,7 +127,7 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <motion.div
@@ -218,18 +218,17 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
                   const Icon = option.icon
                   const isSelected = formData.adjustment_type === option.value
                   const colorClass = option.color === 'green' ? 'text-green-600' :
-                                   option.color === 'red' ? 'text-red-600' : 'text-blue-600'
+                    option.color === 'red' ? 'text-red-600' : 'text-blue-600'
                   const borderClass = option.color === 'green' ? 'border-green-500 bg-green-50' :
-                                     option.color === 'red' ? 'border-red-500 bg-red-50' : 'border-blue-500 bg-blue-50'
-                  
+                    option.color === 'red' ? 'border-red-500 bg-red-50' : 'border-blue-500 bg-blue-50'
+
                   return (
                     <button
                       key={option.value}
                       type="button"
                       onClick={() => handleInputChange('adjustment_type', option.value)}
-                      className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                        isSelected ? borderClass : 'border-gray-200 hover:bg-gray-50'
-                      }`}
+                      className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${isSelected ? borderClass : 'border-gray-200 hover:bg-gray-50'
+                        }`}
                     >
                       <Icon size={16} className={colorClass} />
                       <div className="text-center">
@@ -312,13 +311,12 @@ export default function StockAdjustmentModal({ part, onClose, onAdjust }: StockA
                     <p className="text-sm" style={{ color: colors.textSecondary }}>
                       Change ({formData.adjustment_type})
                     </p>
-                    <p className={`font-semibold ${
-                      adjustmentOptions.find(opt => opt.value === formData.adjustment_type)?.type === 'IN' 
-                        ? 'text-green-600' 
-                        : adjustmentOptions.find(opt => opt.value === formData.adjustment_type)?.type === 'OUT' 
-                          ? 'text-red-600' 
+                    <p className={`font-semibold ${adjustmentOptions.find(opt => opt.value === formData.adjustment_type)?.type === 'IN'
+                        ? 'text-green-600'
+                        : adjustmentOptions.find(opt => opt.value === formData.adjustment_type)?.type === 'OUT'
+                          ? 'text-red-600'
                           : 'text-blue-600'
-                    }`}>
+                      }`}>
                       {adjustmentOptions.find(opt => opt.value === formData.adjustment_type)?.type === 'OUT' ? '-' : '+'}
                       {formData.quantity} {refreshedPart.unit}
                     </p>

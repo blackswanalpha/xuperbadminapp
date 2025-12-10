@@ -545,13 +545,13 @@ export default function AdvancedFinancialAnalytics({ vehicleId }: AdvancedFinanc
           </div>
           <div className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
             {expenseData?.expenses_by_category?.length ? 
-              Math.max(...expenseData.expenses_by_category.map(c => c.percentage)).toFixed(1) + '%' 
+              Math.max(...expenseData.expenses_by_category.map(c => c.percentage || 0)).toFixed(1) + '%' 
               : '0%'
             }
           </div>
           <div className="text-xs" style={{ color: colors.textSecondary }}>
             {expenseData?.expenses_by_category?.length ? 
-              expenseData.expenses_by_category.reduce((max, cat) => cat.percentage > max.percentage ? cat : max).category
+              expenseData.expenses_by_category.reduce((max, cat) => (cat.percentage || 0) > (max.percentage || 0) ? cat : max).category
               : 'N/A'
             }
           </div>
@@ -679,7 +679,7 @@ export default function AdvancedFinancialAnalytics({ vehicleId }: AdvancedFinanc
                       className="text-lg font-bold"
                       style={{ color: [colors.adminError, colors.adminWarning, colors.adminAccent, colors.adminPrimary][index % 4] }}
                     >
-                      {category.percentage.toFixed(1)}%
+                      {category.percentage ? category.percentage.toFixed(1) : '0.0'}%
                     </div>
                   </div>
                   <div className="text-xl font-bold" style={{ color: colors.textPrimary }}>
@@ -691,7 +691,7 @@ export default function AdvancedFinancialAnalytics({ vehicleId }: AdvancedFinanc
                     <div
                       className="h-2 rounded-full"
                       style={{
-                        width: `${category.percentage}%`,
+                        width: `${category.percentage || 0}%`,
                         backgroundColor: [colors.adminError, colors.adminWarning, colors.adminAccent, colors.adminPrimary][index % 4]
                       }}
                     />

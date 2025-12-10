@@ -263,7 +263,7 @@ export default function ContractDetailsPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-500 mb-1">Name</label>
-                                <p className="font-medium">{contract.client?.first_name ? `${contract.client.first_name} ${contract.client.last_name || ''}` : 'N/A'}</p>
+                                <p className="font-medium">{contract.client_name || 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>

@@ -35,8 +35,8 @@ export default function ContractApprovalsPage() {
   const filteredContracts = contracts.filter(contract => {
     const matchesSearch =
       contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.client?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (contract.client?.first_name && contract.client.first_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      contract.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (contract.client?.email && contract.client.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (activeTab === 'ALL') return matchesSearch;
     return matchesSearch && contract.status === activeTab;
@@ -144,9 +144,7 @@ export default function ContractApprovalsPage() {
                       <div>
                         <span className="text-gray-500 block">Client</span>
                         <span className="font-medium text-gray-900">
-                          {contract.client?.first_name
-                            ? `${contract.client.first_name} ${contract.client.last_name || ''}`
-                            : contract.client?.email || 'N/A'}
+                          {contract.client_name || contract.client?.email || 'N/A'}
                         </span>
                       </div>
                       <div>

@@ -24,7 +24,7 @@ export default function AddStockUsageModal({ onClose, onAdd }: AddStockUsageModa
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<Part | null>(null)
-  
+
   // Form data
   const [formData, setFormData] = useState({
     part: '',
@@ -82,7 +82,7 @@ export default function AddStockUsageModal({ onClose, onAdd }: AddStockUsageModa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!selectedPart) {
       setError('Please select a part')
       return
@@ -93,7 +93,7 @@ export default function AddStockUsageModal({ onClose, onAdd }: AddStockUsageModa
       setError(`Cannot use more than available stock (${selectedPart.current_stock} ${selectedPart.unit})`)
       return
     }
-    
+
     try {
       setSaving(true)
       setError(null)
@@ -124,7 +124,7 @@ export default function AddStockUsageModal({ onClose, onAdd }: AddStockUsageModa
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <motion.div

@@ -236,7 +236,7 @@ export default function VehicleDetailsPage() {
                       <tr key={contract.id} className="border-b hover:bg-gray-50" style={{ borderColor: colors.borderLight }}>
                         <td className="py-3 px-4 font-medium" style={{ color: colors.adminPrimary }}>{contract.contract_number}</td>
                         <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                          {contract.client?.first_name} {contract.client?.last_name || contract.client?.email}
+                          {contract.client_name || contract.client?.email}
                         </td>
                         <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
                           {new Date(contract.start_date).toLocaleDateString()} - {new Date(contract.end_date).toLocaleDateString()}
@@ -481,7 +481,7 @@ export default function VehicleDetailsPage() {
                         <tr key={contract.id} className="border-b hover:bg-gray-50" style={{ borderColor: colors.borderLight }}>
                           <td className="py-3 px-4 font-medium" style={{ color: colors.adminPrimary }}>{contract.contract_number}</td>
                           <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                            {contract.client?.first_name} {contract.client?.last_name || contract.client?.email}
+                            {contract.client_name || contract.client?.email}
                           </td>
                           <td className="py-3 px-4 font-medium" style={{ color: colors.adminSuccess }}>
                             KSh {Number(contract.security_deposit).toLocaleString()}

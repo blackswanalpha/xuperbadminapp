@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { CheckSquare, AlertTriangle, Clock, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { CheckSquare, AlertTriangle, Clock, TrendingUp, Activity, Car } from 'lucide-react'
 import StatCard from '@/components/shared/stat-card'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
@@ -12,14 +13,14 @@ import {
   fetchRecentActivities,
   Contract,
   DashboardStats,
-  Activity
+  Activity as ActivityType
 } from '@/lib/api'
 
 export default function SupervisorDashboard() {
   const [loading, setLoading] = useState(true)
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
   const [monitorContracts, setMonitorContracts] = useState<Contract[]>([])
-  const [activities, setActivities] = useState<Activity[]>([])
+  const [activities, setActivities] = useState<ActivityType[]>([])
 
   useEffect(() => {
     const loadData = async () => {
@@ -136,9 +137,7 @@ export default function SupervisorDashboard() {
                       />
                       <div>
                         <p className="font-medium" style={{ color: colors.textPrimary }}>
-                          {contract.client?.first_name
-                            ? `${contract.client.first_name} ${contract.client.last_name || ''}`
-                            : contract.client?.email || 'Unknown Client'}
+                          {contract.client_name || contract.client?.email || 'Unknown Client'}
                         </p>
                         <p className="text-sm" style={{ color: colors.textSecondary }}>
                           Contract - {parseInt(contract.total_contract_value).toLocaleString()}
@@ -203,42 +202,62 @@ export default function SupervisorDashboard() {
         transition={{ delay: 0.8, duration: 0.6 }}
       >
         <DashboardCard title="Quick Actions" subtitle="Common supervisory tasks">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
-              style={{ borderColor: colors.borderLight }}
-            >
-              <div className="flex items-center gap-3">
-                <CheckSquare size={20} style={{ color: colors.supervisorPrimary }} />
-                <span className="font-medium" style={{ color: colors.textPrimary }}>
-                  Review Contracts
-                </span>
-              </div>
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link href="/supervisor/contract-approvals">
+              <button
+                className="w-full p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                style={{ borderColor: colors.borderLight }}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckSquare size={20} style={{ color: colors.supervisorPrimary }} />
+                  <span className="font-medium" style={{ color: colors.textPrimary }}>
+                    Review Contracts
+                  </span>
+                </div>
+              </button>
+            </Link>
 
-            <button
-              className="p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all"
-              style={{ borderColor: colors.borderLight }}
-            >
-              <div className="flex items-center gap-3">
-                <TrendingUp size={20} style={{ color: colors.supervisorAccent }} />
-                <span className="font-medium" style={{ color: colors.textPrimary }}>
-                  Performance Report
-                </span>
-              </div>
-            </button>
+            <Link href="/supervisor/tracking-overview">
+              <button
+                className="w-full p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all"
+                style={{ borderColor: colors.borderLight }}
+              >
+                <div className="flex items-center gap-3">
+                  <Activity size={20} style={{ color: colors.supervisorAccent }} />
+                  <span className="font-medium" style={{ color: colors.textPrimary }}>
+                    Vehicle Tracking
+                  </span>
+                </div>
+              </button>
+            </Link>
 
-            <button
-              className="p-4 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all"
-              style={{ borderColor: colors.borderLight }}
-            >
-              <div className="flex items-center gap-3">
-                <AlertTriangle size={20} style={{ color: colors.supervisorPrimaryLight }} />
-                <span className="font-medium" style={{ color: colors.textPrimary }}>
-                  Handle Issues
-                </span>
-              </div>
-            </button>
+            <Link href="/supervisor/performance-reports">
+              <button
+                className="w-full p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
+                style={{ borderColor: colors.borderLight }}
+              >
+                <div className="flex items-center gap-3">
+                  <TrendingUp size={20} style={{ color: colors.supervisorSecondary }} />
+                  <span className="font-medium" style={{ color: colors.textPrimary }}>
+                    Performance Report
+                  </span>
+                </div>
+              </button>
+            </Link>
+
+            <Link href="/supervisor/fleet-monitoring">
+              <button
+                className="w-full p-4 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all"
+                style={{ borderColor: colors.borderLight }}
+              >
+                <div className="flex items-center gap-3">
+                  <Car size={20} style={{ color: colors.supervisorPrimaryLight }} />
+                  <span className="font-medium" style={{ color: colors.textPrimary }}>
+                    Fleet Monitoring
+                  </span>
+                </div>
+              </button>
+            </Link>
           </div>
         </DashboardCard>
       </motion.div>

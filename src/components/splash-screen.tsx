@@ -18,7 +18,7 @@ export default function SplashScreen() {
   }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -39,7 +39,7 @@ export default function SplashScreen() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.8 }}
-          className="text-4xl font-bold text-white mb-4"
+          className="text-4xl font-bold text-blue-600 mb-4"
         >
           XuperB Admin
         </motion.h1>
@@ -48,7 +48,7 @@ export default function SplashScreen() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
-          className="text-blue-100 text-lg mb-8"
+          className="text-blue-600 text-lg mb-8"
         >
           Vehicle Management System
         </motion.p>
@@ -57,13 +57,13 @@ export default function SplashScreen() {
           initial={{ width: 0 }}
           animate={{ width: "100%" }}
           transition={{ delay: 1, duration: 1.5 }}
-          className="w-64 h-1 bg-white/30 rounded-full mx-auto overflow-hidden"
+          className="w-64 h-1 bg-blue-200 rounded-full mx-auto overflow-hidden"
         >
           <motion.div
             initial={{ width: "0%" }}
             animate={{ width: "100%" }}
             transition={{ delay: 1, duration: 1.5 }}
-            className="h-full bg-white rounded-full"
+            className="h-full bg-blue-600 rounded-full"
           />
         </motion.div>
 
@@ -75,7 +75,7 @@ export default function SplashScreen() {
         >
           <button
             onClick={() => router.push('/login')}
-            className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+            className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
             Get Started
           </button>

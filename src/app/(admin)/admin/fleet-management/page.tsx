@@ -18,22 +18,31 @@ export default function FleetManagementPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 10
+
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [classificationFilter, setClassificationFilter] = useState('ALL')
+  const [supplierFilter, setSupplierFilter] = useState('ALL')
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [vehiclesData, statsData] = await Promise.all([
-          fetchVehicles(),
+        setLoading(true)
+        const [vehiclesResponse, statsData] = await Promise.all([
+          fetchVehicles(currentPage, pageSize),
           fetchVehicleStatistics().catch(() => null) // Statistics might not be available
         ])
-        setVehicles(vehiclesData)
-        setFilteredVehicles(vehiclesData)
+        setVehicles(vehiclesResponse.vehicles)
+        setFilteredVehicles(vehiclesResponse.vehicles)
+        setTotalPages(vehiclesResponse.totalPages)
+        setTotalCount(vehiclesResponse.totalCount)
         setStatistics(statsData)
       } catch (err) {
         setError('Failed to load vehicles')
@@ -44,7 +53,7 @@ export default function FleetManagementPage() {
     }
 
     loadData()
-  }, [])
+  }, [currentPage])
 
   // Filter and search effect
   useEffect(() => {
@@ -67,9 +76,14 @@ export default function FleetManagementPage() {
       filtered = filtered.filter(vehicle => vehicle.status === statusFilter)
     }
 
-    // Apply classification filter
-    if (classificationFilter !== 'ALL') {
-      filtered = filtered.filter(vehicle => vehicle.classification === classificationFilter)
+    // Apply supplier filter
+    if (supplierFilter !== 'ALL') {
+      filtered = filtered.filter(vehicle => {
+        if (typeof vehicle.supplier === 'string') {
+          return vehicle.supplier === supplierFilter
+        }
+        return vehicle.supplier?.name === supplierFilter
+      })
     }
 
     // Apply sorting
@@ -89,7 +103,7 @@ export default function FleetManagementPage() {
     })
 
     setFilteredVehicles(filtered)
-  }, [vehicles, searchTerm, statusFilter, classificationFilter, sortBy, sortOrder])
+  }, [vehicles, searchTerm, statusFilter, supplierFilter, sortBy, sortOrder])
 
   const handleDeleteVehicle = async () => {
     if (!selectedVehicle) return
@@ -221,16 +235,22 @@ export default function FleetManagementPage() {
                 <option value="UNAVAILABLE">Unavailable</option>
               </select>
 
-              {/* Classification Filter */}
+              {/* Supplier Filter */}
               <select
-                value={classificationFilter}
-                onChange={(e) => setClassificationFilter(e.target.value)}
+                value={supplierFilter}
+                onChange={(e) => setSupplierFilter(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm"
                 style={{ borderColor: colors.borderLight }}
               >
-                <option value="ALL">All Types</option>
-                <option value="INTERNAL">Internal</option>
-                <option value="EXTERNAL">External</option>
+                <option value="ALL">All Suppliers</option>
+                {Array.from(new Set(vehicles.map(v => {
+                  if (typeof v.supplier === 'string') {
+                    return v.supplier
+                  }
+                  return v.supplier?.name
+                }).filter(Boolean))).map(supplierName => (
+                  <option key={supplierName} value={supplierName}>{supplierName}</option>
+                ))}
               </select>
 
               {/* Sort Options */}
@@ -260,12 +280,12 @@ export default function FleetManagementPage() {
               </div>
 
               {/* Clear Filters Button */}
-              {(searchTerm || statusFilter !== 'ALL' || classificationFilter !== 'ALL') && (
+              {(searchTerm || statusFilter !== 'ALL' || supplierFilter !== 'ALL') && (
                 <button
                   onClick={() => {
                     setSearchTerm('')
                     setStatusFilter('ALL')
-                    setClassificationFilter('ALL')
+                    setSupplierFilter('ALL')
                   }}
                   className="px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
                   style={{ color: colors.textSecondary }}
@@ -295,7 +315,7 @@ export default function FleetManagementPage() {
                       Registration Number
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Classification
+                      Supplier Name
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Status
@@ -324,16 +344,11 @@ export default function FleetManagementPage() {
                       <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
                         {vehicle.registration_number}
                       </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: vehicle.classification === 'EXTERNAL' ? `${colors.adminPrimary}20` : `${colors.adminAccent}20`,
-                            color: vehicle.classification === 'EXTERNAL' ? colors.adminPrimary : colors.adminAccent,
-                          }}
-                        >
-                          {vehicle.classification}
-                        </span>
+                      <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
+                        {typeof vehicle.supplier === 'string'
+                          ? vehicle.supplier
+                          : vehicle.supplier?.name || 'No Supplier'
+                        }
                       </td>
                       <td className="py-3 px-4">
                         <span
@@ -390,12 +405,80 @@ export default function FleetManagementPage() {
               </table>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t" style={{ borderColor: colors.borderLight }}>
+              <div className="text-sm" style={{ color: colors.textSecondary }}>
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} vehicles
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                  style={{ color: colors.textPrimary }}
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Previous
+                </button>
+
+                {/* Page Numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                  const pageNum = startPage + i;
+                  if (pageNum > totalPages) return null;
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
+                          ? 'text-white'
+                          : 'hover:bg-gray-100'
+                        }`}
+                      style={{
+                        backgroundColor: currentPage === pageNum ? colors.adminPrimary : 'transparent',
+                        color: currentPage === pageNum ? 'white' : colors.textPrimary,
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
         </DashboardCard>
       </motion.div>
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && selectedVehicle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
               Confirm Delete

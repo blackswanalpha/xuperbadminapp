@@ -93,9 +93,21 @@ export default function VehicleCreatePage() {
     try {
       const newVehicle = await createVehicle(formData)
       router.push(`/admin/fleet-management/${newVehicle.id}`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating vehicle:', error)
-      setError('Failed to create vehicle. Please try again.')
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'object' && errorData !== null) {
+          const messages = Object.entries(errorData)
+            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+            .join('\n');
+          setError(messages || 'Failed to create vehicle');
+        } else {
+          setError(String(errorData || 'Failed to create vehicle'));
+        }
+      } else {
+        setError('Failed to create vehicle. Please try again.')
+      }
     } finally {
       setSaving(false)
     }
@@ -213,11 +225,11 @@ export default function VehicleCreatePage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                  Classification
+                  Vehicle Type
                 </label>
                 <select
-                  value={formData.classification || 'INTERNAL'}
-                  onChange={(e) => handleInputChange('classification', e.target.value)}
+                  value={formData.vehicle_type || 'INTERNAL'}
+                  onChange={(e) => handleInputChange('vehicle_type', e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
                   style={{ borderColor: colors.borderLight }}
                 >

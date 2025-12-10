@@ -20,6 +20,7 @@ import { fetchInventoryItems, InventoryItem } from '@/lib/api'
 
 export default function FleetMonitoringPage() {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -36,12 +37,20 @@ export default function FleetMonitoringPage() {
   const loadFleetData = async () => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetchInventoryItems()
       const items = response.results || []
       setInventoryItems(items)
       setFilteredItems(items)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading fleet data:', error)
+      const errorMessage = error?.response?.data?.detail || 
+                          error?.response?.data?.message ||
+                          error?.message || 
+                          'Failed to load fleet data. Please try again.'
+      setError(errorMessage)
+      setInventoryItems([])
+      setFilteredItems([])
     } finally {
       setLoading(false)
     }
@@ -187,16 +196,45 @@ export default function FleetMonitoringPage() {
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={20} />
+              <div>
+                <p className="font-medium">Error Loading Fleet Data</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </div>
+            <button
+              onClick={loadFleetData}
+              className="mt-2 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Fleet Grid */}
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading fleet data...</p>
           </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <AlertCircle size={48} className="mx-auto text-red-300 mb-4" />
+            <p className="text-gray-500">Unable to load fleet data</p>
+          </div>
+        ) : filteredItems.length === 0 && inventoryItems.length === 0 ? (
+          <div className="text-center py-12">
+            <Car size={48} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500">No vehicles in fleet</p>
+          </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-12">
             <Car size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">No vehicles found</p>
+            <p className="text-gray-500">No vehicles match your search criteria</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

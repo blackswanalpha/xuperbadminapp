@@ -13,11 +13,11 @@ interface LogoutModalProps {
   userRole?: 'admin' | 'supervisor'
 }
 
-export default function LogoutModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  userRole = 'admin' 
+export default function LogoutModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  userRole = 'admin'
 }: LogoutModalProps) {
   const [isLoading, setIsLoading] = useState(false)
 
@@ -49,7 +49,7 @@ export default function LogoutModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           />
 
           {/* Modal */}
@@ -59,14 +59,14 @@ export default function LogoutModal({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            <div 
+            <div
               className="bg-white rounded-lg w-full max-w-md overflow-hidden"
               style={{ boxShadow: designTokens.shadows.lg }}
             >
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: `${getErrorColor()}15` }}
                   >
@@ -93,7 +93,7 @@ export default function LogoutModal({
 
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
                       style={{ backgroundColor: getPrimaryColor() }}
                     >

@@ -1,81 +1,154 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, CheckCircle, Clock, AlertCircle, Plus, Search, Filter } from 'lucide-react'
+import { FileText, CheckCircle, Clock, AlertCircle, Plus, Search, Filter, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import DashboardCard from '@/components/shared/dashboard-card'
 import StatCard from '@/components/shared/stat-card'
 import { colors } from '@/lib/theme/colors'
+import { fetchAllContracts, deleteContract, Contract, fetchVehicles } from '@/lib/api'
 
 export default function ContractManagementPage() {
+  const router = useRouter()
+  const [contracts, setContracts] = useState<Contract[]>([])
+  const [vehicles, setVehicles] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [contractsPerPage] = useState(10)
+
   const stats = [
     {
       title: 'Total Contracts',
-      value: '89',
+      value: contracts.length.toString(),
       icon: FileText,
       trend: { value: '+7', isPositive: true },
       color: colors.adminPrimary,
     },
     {
       title: 'Active',
-      value: '56',
+      value: contracts.filter(c => c.status === 'ACTIVE').length.toString(),
       icon: CheckCircle,
       trend: { value: '+5', isPositive: true },
       color: colors.adminSuccess,
     },
     {
       title: 'Pending',
-      value: '18',
+      value: contracts.filter(c => c.status === 'PENDING').length.toString(),
       icon: Clock,
       trend: { value: '+2', isPositive: false },
       color: colors.adminWarning,
     },
     {
       title: 'Expiring Soon',
-      value: '15',
+      value: contracts.filter(c => {
+        const endDate = new Date(c.end_date)
+        const today = new Date()
+        const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 3600 * 24))
+        return daysUntilExpiry <= 30 && daysUntilExpiry > 0
+      }).length.toString(),
       icon: AlertCircle,
       trend: { value: '+3', isPositive: false },
       color: colors.adminError,
     },
   ]
 
-  const contracts = [
-    {
-      id: 'CNT-001',
-      client: 'John Doe',
-      vehicle: 'Toyota Corolla (KAA 123A)',
-      startDate: '2024-01-01',
-      endDate: '2024-12-31',
-      status: 'Active',
-      value: 'KSh 450,000',
-    },
-    {
-      id: 'CNT-002',
-      client: 'Jane Smith',
-      vehicle: 'Honda Civic (KBB 456B)',
-      startDate: '2024-01-15',
-      endDate: '2024-07-15',
-      status: 'Active',
-      value: 'KSh 325,000',
-    },
-    {
-      id: 'CNT-003',
-      client: 'Bob Johnson',
-      vehicle: 'Nissan Altima (KCC 789C)',
-      startDate: '2024-02-01',
-      endDate: '2024-08-01',
-      status: 'Pending',
-      value: 'KSh 580,000',
-    },
-    {
-      id: 'CNT-004',
-      client: 'Alice Brown',
-      vehicle: 'Mazda CX-5 (KDD 012D)',
-      startDate: '2023-06-01',
-      endDate: '2024-02-01',
-      status: 'Expiring',
-      value: 'KSh 412,000',
-    },
-  ]
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [contractsData, vehiclesData] = await Promise.all([
+          fetchAllContracts(),
+          fetchVehicles(1, 1000) // Get all vehicles for reference
+        ])
+        setContracts(contractsData)
+        setVehicles(vehiclesData.vehicles)
+      } catch (error) {
+        console.error('Error loading contracts:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  // Helper function to get vehicle name from ID
+  const getVehicleName = (vehicleId: number) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId)
+    return vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.registration_number})` : `Vehicle #${vehicleId}`
+  }
+
+  // Helper function to get client name from contract
+  const getClientName = (contract: Contract) => {
+    if (contract.client_name) {
+      return contract.client_name
+    }
+    return contract.client?.email || 'Unknown Client'
+  }
+
+  // Filter and search contracts
+  const filteredContracts = contracts.filter(contract => {
+    const matchesSearch = !searchTerm || 
+      contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getClientName(contract).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getVehicleName(contract.vehicle).toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = !statusFilter || contract.status === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
+
+  // Pagination logic
+  const indexOfLastContract = currentPage * contractsPerPage
+  const indexOfFirstContract = indexOfLastContract - contractsPerPage
+  const currentContracts = filteredContracts.slice(indexOfFirstContract, indexOfLastContract)
+  const totalPages = Math.ceil(filteredContracts.length / contractsPerPage)
+
+  // Handle actions
+  const handleViewContract = (contractId: number) => {
+    router.push(`/admin/contract-management/${contractId}`)
+  }
+
+  const handleEditContract = (contractId: number) => {
+    router.push(`/admin/contract-management/${contractId}/edit`)
+  }
+
+  const handleDeleteContract = async (contractId: number) => {
+    if (window.confirm('Are you sure you want to delete this contract? This action cannot be undone.')) {
+      try {
+        await deleteContract(contractId)
+        setContracts(contracts.filter(c => c.id !== contractId))
+        alert('Contract deleted successfully')
+      } catch (error) {
+        console.error('Error deleting contract:', error)
+        alert('Failed to delete contract')
+      }
+    }
+  }
+
+  const handleCreateContract = () => {
+    router.push('/admin/contract-management/create')
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return colors.adminSuccess
+      case 'PENDING': return colors.adminWarning
+      case 'COMPLETED': return colors.textSecondary
+      case 'EXPIRED': return colors.adminError
+      case 'CANCELLED': return colors.adminError
+      default: return colors.textSecondary
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg" style={{ color: colors.textSecondary }}>Loading contracts...</div>
+      </div>
+    )
+  }
 
   return (
     
@@ -95,6 +168,7 @@ export default function ContractManagementPage() {
             </p>
           </div>
           <button
+            onClick={handleCreateContract}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
             style={{ backgroundColor: colors.adminPrimary }}
           >
@@ -127,7 +201,7 @@ export default function ContractManagementPage() {
             title="All Contracts"
             subtitle="Manage rental agreements and contracts"
             action={
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className="relative">
                   <Search
                     size={18}
@@ -137,16 +211,25 @@ export default function ContractManagementPage() {
                   <input
                     type="text"
                     placeholder="Search contracts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm"
                     style={{ borderColor: colors.borderLight }}
                   />
                 </div>
-                <button
-                  className="p-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 transition-all text-sm"
                   style={{ borderColor: colors.borderLight }}
                 >
-                  <Filter size={18} style={{ color: colors.textSecondary }} />
-                </button>
+                  <option value="">All Status</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="EXPIRED">Expired</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
               </div>
             }
           >
@@ -155,7 +238,7 @@ export default function ContractManagementPage() {
                 <thead>
                   <tr className="border-b" style={{ borderColor: colors.borderLight }}>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Contract ID
+                      Contract #
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Client
@@ -172,59 +255,158 @@ export default function ContractManagementPage() {
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Status
                     </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {contracts.map((contract, index) => (
-                    <motion.tr
-                      key={contract.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + index * 0.1, duration: 0.5 }}
-                      className="border-b hover:bg-gray-50 transition-colors cursor-pointer"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
-                        {contract.id}
+                  {currentContracts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center" style={{ color: colors.textSecondary }}>
+                        {filteredContracts.length === 0 ? 'No contracts found' : 'No contracts found for current page'}
                       </td>
-                      <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {contract.client}
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {contract.vehicle}
-                      </td>
-                      <td className="py-3 px-4 text-sm" style={{ color: colors.textSecondary }}>
-                        {contract.startDate} - {contract.endDate}
-                      </td>
-                      <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
-                        {contract.value}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor:
-                              contract.status === 'Active'
-                                ? `${colors.adminSuccess}20`
-                                : contract.status === 'Pending'
-                                ? `${colors.adminWarning}20`
-                                : `${colors.adminError}20`,
-                            color:
-                              contract.status === 'Active'
-                                ? colors.adminSuccess
-                                : contract.status === 'Pending'
-                                ? colors.adminWarning
-                                : colors.adminError,
-                          }}
-                        >
-                          {contract.status}
-                        </span>
-                      </td>
-                    </motion.tr>
-                  ))}
+                    </tr>
+                  ) : (
+                    currentContracts.map((contract, index) => (
+                      <motion.tr
+                        key={contract.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05, duration: 0.3 }}
+                        className="border-b hover:bg-gray-50 transition-colors"
+                        style={{ borderColor: colors.borderLight }}
+                      >
+                        <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
+                          {contract.contract_number}
+                        </td>
+                        <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
+                          {getClientName(contract)}
+                        </td>
+                        <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
+                          {getVehicleName(contract.vehicle)}
+                        </td>
+                        <td className="py-3 px-4 text-sm" style={{ color: colors.textSecondary }}>
+                          {new Date(contract.start_date).toLocaleDateString()} - {new Date(contract.end_date).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
+                          KSh {parseFloat(contract.total_contract_value || '0').toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: `${getStatusColor(contract.status)}20`,
+                              color: getStatusColor(contract.status),
+                            }}
+                          >
+                            {contract.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleViewContract(contract.id)}
+                              className="p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                              title="View Details"
+                            >
+                              <Eye size={16} style={{ color: colors.adminPrimary }} />
+                            </button>
+                            <button
+                              onClick={() => handleEditContract(contract.id)}
+                              className="p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                              title="Edit Contract"
+                            >
+                              <Edit size={16} style={{ color: colors.adminPrimary }} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteContract(contract.id)}
+                              className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                              title="Delete Contract"
+                            >
+                              <Trash2 size={16} style={{ color: colors.adminError }} />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: colors.borderLight }}>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>
+                  Showing {indexOfFirstContract + 1} to {Math.min(indexOfLastContract, filteredContracts.length)} of {filteredContracts.length} contracts
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === 1 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white border hover:bg-gray-50'
+                    }`}
+                    style={{ borderColor: colors.borderLight, color: currentPage === 1 ? undefined : colors.textPrimary }}
+                  >
+                    <ChevronLeft size={16} />
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i
+                      } else {
+                        pageNumber = currentPage - 2 + i
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => setCurrentPage(pageNumber)}
+                          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === pageNumber
+                              ? 'text-white'
+                              : 'bg-white border hover:bg-gray-50'
+                          }`}
+                          style={{
+                            backgroundColor: currentPage === pageNumber ? colors.adminPrimary : undefined,
+                            borderColor: currentPage === pageNumber ? colors.adminPrimary : colors.borderLight,
+                            color: currentPage === pageNumber ? undefined : colors.textPrimary
+                          }}
+                        >
+                          {pageNumber}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === totalPages 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white border hover:bg-gray-50'
+                    }`}
+                    style={{ borderColor: colors.borderLight, color: currentPage === totalPages ? undefined : colors.textPrimary }}
+                  >
+                    Next
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </DashboardCard>
         </motion.div>
       </motion.div>

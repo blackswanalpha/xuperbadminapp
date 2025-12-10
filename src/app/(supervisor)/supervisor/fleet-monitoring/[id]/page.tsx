@@ -17,7 +17,8 @@ import {
     Activity,
     AlertCircle,
     CheckCircle,
-    Plus
+    Plus,
+    CreditCard
 } from 'lucide-react'
 import StatCard from '@/components/shared/stat-card'
 import DashboardCard from '@/components/shared/dashboard-card'
@@ -26,11 +27,13 @@ import {
     fetchVehicleDetailedInfo,
     fetchVehicleMaintenance,
     fetchStockUsageByVehicle,
+    fetchVehicleExpenses,
     MaintenanceRecord,
-    StockUsage
+    StockUsage,
+    VehicleExpenseItem
 } from '@/lib/api'
 
-type Tab = 'overview' | 'maintenance' | 'stock-usage' | 'analysis'
+type Tab = 'overview' | 'maintenance' | 'stock-usage' | 'service' | 'analysis'
 
 export default function FleetDetailPage() {
     const params = useParams()
@@ -38,10 +41,12 @@ export default function FleetDetailPage() {
     const vehicleId = params.id as string
 
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<Tab>('overview')
     const [vehicleData, setVehicleData] = useState<any>(null)
     const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([])
     const [stockUsage, setStockUsage] = useState<StockUsage[]>([])
+    const [vehicleExpenses, setVehicleExpenses] = useState<VehicleExpenseItem[]>([])
 
     useEffect(() => {
         loadVehicleData()
@@ -50,17 +55,25 @@ export default function FleetDetailPage() {
     const loadVehicleData = async () => {
         try {
             setLoading(true)
-            const [detailData, maintenance, stock] = await Promise.all([
+            setError(null)
+            const [detailData, maintenance, stock, expenses] = await Promise.all([
                 fetchVehicleDetailedInfo(parseInt(vehicleId)),
                 fetchVehicleMaintenance(parseInt(vehicleId)),
-                fetchStockUsageByVehicle(parseInt(vehicleId))
+                fetchStockUsageByVehicle(parseInt(vehicleId)),
+                fetchVehicleExpenses(parseInt(vehicleId))
             ])
 
             setVehicleData(detailData)
             setMaintenanceRecords(maintenance)
             setStockUsage(stock)
-        } catch (error) {
+            setVehicleExpenses(expenses)
+        } catch (error: any) {
             console.error('Error loading vehicle data:', error)
+            const errorMessage = error?.response?.data?.detail || 
+                                error?.response?.data?.message ||
+                                error?.message || 
+                                'Failed to load vehicle data'
+            setError(errorMessage)
         } finally {
             setLoading(false)
         }
@@ -69,7 +82,32 @@ export default function FleetDetailPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading vehicle data...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle size={20} />
+                            <p className="font-medium">Error Loading Vehicle</p>
+                        </div>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                    <button
+                        onClick={loadVehicleData}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
             </div>
         )
     }
@@ -104,6 +142,7 @@ export default function FleetDetailPage() {
         { id: 'overview', label: 'Overview', icon: Car },
         { id: 'maintenance', label: 'Maintenance', icon: Wrench },
         { id: 'stock-usage', label: 'Stock Usage', icon: Package },
+        { id: 'service', label: 'Service', icon: CreditCard },
         { id: 'analysis', label: 'Analysis', icon: TrendingUp }
     ]
 
@@ -141,10 +180,12 @@ export default function FleetDetailPage() {
                     </button>
                     <div>
                         <h1 className="text-3xl font-bold" style={{ color: colors.textPrimary }}>
-                            {vehicle.vehicle?.registration_number || 'N/A'}
+                            {vehicle.vehicle?.registration_number || 
+                             vehicle.registration_number || 
+                             `Vehicle #${vehicleId}`}
                         </h1>
                         <p style={{ color: colors.textSecondary }}>
-                            {vehicle.vehicle?.make} {vehicle.vehicle?.model}
+                            {(vehicle.vehicle?.make || vehicle.make || 'Unknown Make')} {(vehicle.vehicle?.model || vehicle.model || 'Unknown Model')}
                         </p>
                     </div>
                 </div>
@@ -224,6 +265,7 @@ export default function FleetDetailPage() {
                     {activeTab === 'overview' && <OverviewTab vehicle={vehicle} />}
                     {activeTab === 'maintenance' && <MaintenanceTab records={maintenanceRecords} vehicleId={vehicleId} />}
                     {activeTab === 'stock-usage' && <StockUsageTab usage={stockUsage} />}
+                    {activeTab === 'service' && <ServiceTab expenses={vehicleExpenses} vehicleId={vehicleId} />}
                     {activeTab === 'analysis' && (
                         <AnalysisTab
                             vehicle={vehicle}
@@ -245,10 +287,24 @@ function OverviewTab({ vehicle }: { vehicle: any }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <DashboardCard title="Vehicle Information" subtitle="Basic details">
                 <div className="space-y-4">
-                    <InfoRow label="Registration" value={vehicle.vehicle?.registration_number || 'N/A'} />
-                    <InfoRow label="Make & Model" value={`${vehicle.vehicle?.make || 'N/A'} ${vehicle.vehicle?.model || 'N/A'}`} />
-                    <InfoRow label="Color" value={vehicle.vehicle?.color || 'N/A'} />
-                    <InfoRow label="Type" value={vehicle.vehicle?.vehicle_type || 'N/A'} />
+                    <InfoRow label="Registration" value={
+                        vehicle.vehicle?.registration_number || 
+                        vehicle.registration_number || 
+                        'Not specified'
+                    } />
+                    <InfoRow label="Make & Model" value={
+                        `${vehicle.vehicle?.make || vehicle.make || 'Unknown'} ${vehicle.vehicle?.model || vehicle.model || 'Unknown'}`
+                    } />
+                    <InfoRow label="Color" value={
+                        vehicle.vehicle?.color || 
+                        vehicle.color || 
+                        'Not specified'
+                    } />
+                    <InfoRow label="Type" value={
+                        vehicle.vehicle?.vehicle_type || 
+                        vehicle.vehicle_type || 
+                        'Not specified'
+                    } />
                     <InfoRow
                         label="Condition"
                         value={
@@ -270,6 +326,22 @@ function OverviewTab({ vehicle }: { vehicle: any }) {
             <DashboardCard title="Location & Status" subtitle="Current status">
                 <div className="space-y-4">
                     <InfoRow label="Current Location" value={vehicle.location || 'Not set'} icon={MapPin} />
+                    <InfoRow
+                        label="Current Status"
+                        value={
+                            <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                    vehicle.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
+                                    vehicle.status === 'HIRED' ? 'bg-blue-100 text-blue-800' :
+                                    vehicle.status === 'IN_GARAGE' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-red-100 text-red-800'
+                                }`}>
+                                    {vehicle.status || 'AVAILABLE'}
+                                </span>
+                            </div>
+                        }
+                        icon={Activity}
+                    />
                     <InfoRow
                         label="Last Inspection"
                         value={vehicle.last_inspection ? new Date(vehicle.last_inspection).toLocaleDateString() : 'N/A'}
@@ -422,6 +494,189 @@ function StockUsageTab({ usage }: { usage: StockUsage[] }) {
                                         <td className="py-3 px-4">{new Date((item as any).usage_date).toLocaleDateString()}</td>
                                         <td className="py-3 px-4 font-semibold">
                                             KES {(item.part as any)?.unit_cost ? (parseFloat((item.part as any).unit_cost) * (item as any).quantity).toLocaleString() : 0}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </DashboardCard>
+        </div>
+    )
+}
+
+// Service Tab Component - Expense Summary
+function ServiceTab({ expenses, vehicleId }: { expenses: VehicleExpenseItem[], vehicleId: string }) {
+    const totalExpenses = expenses.reduce((sum, exp) => sum + exp.total_amount, 0)
+    const monthlyExpenses = expenses.filter(exp => {
+        const expenseDate = new Date(exp.created_at)
+        const currentMonth = new Date().getMonth()
+        const currentYear = new Date().getFullYear()
+        return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear
+    }).reduce((sum, exp) => sum + exp.total_amount, 0)
+    
+    const pendingExpenses = expenses.filter(exp => exp.status === 'pending').length
+    const approvedExpenses = expenses.filter(exp => exp.status === 'approved').length
+    
+    // Group expenses by category for breakdown
+    const categoryBreakdown = expenses.reduce((acc, exp) => {
+        const category = exp.category_name || 'Other'
+        acc[category] = (acc[category] || 0) + exp.total_amount
+        return acc
+    }, {} as Record<string, number>)
+    
+    // Get recent expenses (last 6 months) for trend
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const recentExpenses = expenses.filter(exp => new Date(exp.created_at) >= sixMonthsAgo)
+    
+    return (
+        <div className="space-y-6">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600">Total Expenses</p>
+                        <DollarSign size={20} style={{ color: colors.supervisorPrimary }} />
+                    </div>
+                    <p className="text-2xl font-bold">KES {totalExpenses.toLocaleString()}</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600">This Month</p>
+                        <Calendar size={20} style={{ color: colors.supervisorAccent }} />
+                    </div>
+                    <p className="text-2xl font-bold">KES {monthlyExpenses.toLocaleString()}</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600">Pending Approvals</p>
+                        <AlertCircle size={20} className="text-yellow-600" />
+                    </div>
+                    <p className="text-2xl font-bold">{pendingExpenses}</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600">Approved</p>
+                        <CheckCircle size={20} className="text-green-600" />
+                    </div>
+                    <p className="text-2xl font-bold">{approvedExpenses}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Category Breakdown */}
+                <DashboardCard title="Category Breakdown" subtitle="Expenses by category">
+                    {Object.keys(categoryBreakdown).length === 0 ? (
+                        <div className="text-center py-12">
+                            <CreditCard size={48} className="mx-auto text-gray-300 mb-4" />
+                            <p className="text-gray-500">No expense categories found</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {Object.entries(categoryBreakdown).map(([category, amount]) => (
+                                <div key={category} className="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span className="text-sm text-gray-600">{category}</span>
+                                    <span className="font-semibold">KES {amount.toLocaleString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </DashboardCard>
+
+                {/* Recent Activity */}
+                <DashboardCard title="Recent Expenses" subtitle="Last 6 months activity">
+                    {recentExpenses.length === 0 ? (
+                        <div className="text-center py-12">
+                            <Activity size={48} className="mx-auto text-gray-300 mb-4" />
+                            <p className="text-gray-500">No recent expenses found</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {recentExpenses.slice(0, 5).map((expense) => (
+                                <div key={expense.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">{expense.category_name || 'Other'}</p>
+                                        <p className="text-xs text-gray-500">
+                                            {new Date(expense.created_at).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-semibold">KES {expense.total_amount.toLocaleString()}</p>
+                                        <span className={`text-xs px-2 py-1 rounded-full ${
+                                            expense.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                            expense.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-red-100 text-red-700'
+                                        }`}>
+                                            {expense.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </DashboardCard>
+            </div>
+
+            {/* Detailed Expense Table */}
+            <DashboardCard 
+                title="All Expenses" 
+                subtitle="Complete expense history for this vehicle"
+                action={
+                    <Link
+                        href={`/supervisor/expense-approvals/add?vehicle_id=${vehicleId}`}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
+                        style={{ backgroundColor: colors.supervisorPrimary }}
+                    >
+                        <Plus size={20} />
+                        Add Expense
+                    </Link>
+                }
+            >
+                {expenses.length === 0 ? (
+                    <div className="text-center py-12">
+                        <CreditCard size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-500">No expense records found</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-200">
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Amount</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {expenses.map((expense) => (
+                                    <tr key={expense.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                        <td className="py-3 px-4 text-sm">
+                                            {new Date(expense.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                                {expense.category_name || 'Other'}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm capitalize">{expense.type?.replace('_', ' ')}</td>
+                                        <td className="py-3 px-4 font-semibold text-sm">KES {expense.total_amount.toLocaleString()}</td>
+                                        <td className="py-3 px-4">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                expense.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                expense.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                expense.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {expense.status}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate">
+                                            {expense.notes || '-'}
                                         </td>
                                     </tr>
                                 ))}

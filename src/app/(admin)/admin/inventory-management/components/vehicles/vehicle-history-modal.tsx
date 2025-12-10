@@ -52,7 +52,7 @@ export default function VehicleHistoryModal({ vehicleId, onClose }: VehicleHisto
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 content-center"
       onClick={onClose}
     >
       <motion.div
@@ -152,13 +152,13 @@ export default function VehicleHistoryModal({ vehicleId, onClose }: VehicleHisto
                             <span
                               className="px-3 py-1 rounded-full text-xs font-medium"
                               style={{
-                                backgroundColor: contract.status === 'COMPLETED' 
-                                  ? `${colors.adminSuccess}20` 
+                                backgroundColor: contract.status === 'COMPLETED'
+                                  ? `${colors.adminSuccess}20`
                                   : contract.status === 'ACTIVE'
                                     ? `${colors.adminPrimary}20`
                                     : `${colors.adminWarning}20`,
-                                color: contract.status === 'COMPLETED' 
-                                  ? colors.adminSuccess 
+                                color: contract.status === 'COMPLETED'
+                                  ? colors.adminSuccess
                                   : contract.status === 'ACTIVE'
                                     ? colors.adminPrimary
                                     : colors.adminWarning,
@@ -205,11 +205,11 @@ export default function VehicleHistoryModal({ vehicleId, onClose }: VehicleHisto
                         <span
                           className="px-3 py-1 rounded-full text-xs font-medium"
                           style={{
-                            backgroundColor: record.status === 'COMPLETED' 
-                              ? `${colors.adminSuccess}20` 
+                            backgroundColor: record.status === 'COMPLETED'
+                              ? `${colors.adminSuccess}20`
                               : `${colors.adminWarning}20`,
-                            color: record.status === 'COMPLETED' 
-                              ? colors.adminSuccess 
+                            color: record.status === 'COMPLETED'
+                              ? colors.adminSuccess
                               : colors.adminWarning,
                           }}
                         >
@@ -229,7 +229,7 @@ export default function VehicleHistoryModal({ vehicleId, onClose }: VehicleHisto
                 </h3>
                 <div className="space-y-3">
                   {vehicleDetails?.location_history.map((location, index) => (
-                    <div 
+                    <div
                       key={index}
                       className={`p-4 rounded-lg border ${location.is_current ? 'border-green-300 bg-green-50' : ''}`}
                       style={{ borderColor: location.is_current ? colors.adminSuccess : colors.borderLight }}
@@ -244,9 +244,9 @@ export default function VehicleHistoryModal({ vehicleId, onClose }: VehicleHisto
                           </p>
                         </div>
                         {location.is_current && (
-                          <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ 
+                          <span className="text-xs px-3 py-1 rounded-full font-medium" style={{
                             backgroundColor: `${colors.adminSuccess}20`,
-                            color: colors.adminSuccess 
+                            color: colors.adminSuccess
                           }}>
                             Current Location
                           </span>

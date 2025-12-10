@@ -2,13 +2,41 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+    ArrowLeft,
+    Printer,
+    Edit,
+    Trash,
+    Banknote,
+    Clock,
+    Calculator,
+    Car,
+    User,
+    Calendar,
+    FileText,
+    Wrench,
+    Package
+} from 'lucide-react'
 import { fetchJobCard, JobCard } from '@/lib/api'
-import { ArrowLeft, Edit, Trash, Printer, CheckCircle, AlertTriangle } from 'lucide-react'
-import Link from 'next/link'
-import { Separator } from '@/components/ui/separator'
+import DashboardCard from '@/components/shared/dashboard-card'
+import StatCard from '@/components/shared/stat-card'
+import { colors } from '@/lib/theme/colors'
+import { designTokens } from '@/lib/theme/design-tokens'
+
+// Tab Button Component
+const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
+    <button
+        onClick={onClick}
+        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${active
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+    >
+        <Icon size={16} />
+        {label}
+    </button>
+)
 
 export default function JobCardDetailsPage() {
     const params = useParams()
@@ -16,6 +44,7 @@ export default function JobCardDetailsPage() {
     const id = params.id as string
     const [jobCard, setJobCard] = useState<JobCard | null>(null)
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('overview')
 
     useEffect(() => {
         const loadData = async () => {
@@ -32,122 +61,262 @@ export default function JobCardDetailsPage() {
         loadData()
     }, [id])
 
-    if (loading) return <div className="p-8">Loading job card details...</div>
-    if (!jobCard) return <div className="p-8">Job Card not found</div>
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
+
+    if (!jobCard) {
+        return (
+            <div className="p-8 text-center">
+                <h2 className="text-xl font-semibold text-gray-900">Job Card Not Found</h2>
+                <button
+                    onClick={() => router.back()}
+                    className="mt-4 text-blue-600 hover:underline"
+                >
+                    Go Back
+                </button>
+            </div>
+        )
+    }
+
+    const durationDays = Math.ceil(
+        (new Date().getTime() - new Date(jobCard.date_created).getTime()) / (1000 * 3600 * 24)
+    )
+
+    const getStatusColor = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'completed': return 'bg-green-100 text-green-700'
+            case 'in_progress': return 'bg-blue-100 text-blue-700'
+            case 'pending': return 'bg-yellow-100 text-yellow-700'
+            default: return 'bg-gray-100 text-gray-700'
+        }
+    }
 
     return (
-        <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+        >
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <ArrowLeft className="text-gray-500" size={20} />
+                    </button>
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">{jobCard.job_card_number}</h2>
-                        <div className="text-sm text-muted-foreground">{jobCard.client_name} - {jobCard.registration_number}</div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h1 className="text-3xl font-bold" style={{ color: colors.textPrimary }}>
+                                {jobCard.job_card_number}
+                            </h1>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${getStatusColor(jobCard.status)}`}>
+                                {jobCard.status}
+                            </span>
+                        </div>
+                        <p style={{ color: colors.textSecondary }} className="flex items-center gap-2">
+                            {jobCard.client_name} • {jobCard.registration_number}
+                        </p>
                     </div>
                 </div>
-                <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                        <Printer className="mr-2 h-4 w-4" /> Print
-                    </Button>
-                    <Link href={`/supervisor/garage/job-cards/${id}/edit`}>
-                        <Button variant="outline" size="sm">
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                        </Button>
-                    </Link>
-                    <Button variant="destructive" size="sm">
-                        <Trash className="mr-2 h-4 w-4" /> Delete
-                    </Button>
+
+                <div className="flex gap-2">
+                    <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 text-sm font-medium">
+                        <Printer size={16} />
+                        Print
+                    </button>
+                    <button
+                        onClick={() => router.push(`/supervisor/garage/job-cards/${id}/edit`)}
+                        className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 text-sm font-medium"
+                    >
+                        <Edit size={16} />
+                        Edit
+                    </button>
+                    <button className="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium">
+                        <Trash size={16} />
+                        Delete
+                    </button>
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold uppercase">{jobCard.status}</div>
-                        <p className="text-xs text-muted-foreground capitalize">
-                            {jobCard.payment_status}
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">KES {Number(jobCard.total_job_value).toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Balance Due: KES {Number(jobCard.balance_due).toLocaleString()}
-                        </p>
-                    </CardContent>
-                </Card>
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                    title="Total Job Value"
+                    value={`KES ${(jobCard.total_job_value || 0).toLocaleString()}`}
+                    icon={Banknote}
+                    color={colors.supervisorPrimary}
+                />
+                <StatCard
+                    title="Balance Due"
+                    value={`KES ${(jobCard.balance_due || 0).toLocaleString()}`}
+                    icon={Calculator}
+                    color={jobCard.balance_due > 0 ? '#ef4444' : '#22c55e'}
+                />
+                <StatCard
+                    title="Estimated Cost"
+                    value={`KES ${(jobCard.estimated_cost || 0).toLocaleString()}`}
+                    icon={Banknote}
+                    color="#f59e0b" // Amber-500
+                />
+                <StatCard
+                    title="Duration"
+                    value={`${durationDays} Days`}
+                    icon={Clock}
+                    color="#6366f1" // Indigo-500
+                />
             </div>
 
-            <Tabs defaultValue="details" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="workflow">Services & Defects</TabsTrigger>
-                    <TabsTrigger value="parts">Parts & Inventory</TabsTrigger>
-                    <TabsTrigger value="financials">Financials</TabsTrigger>
-                </TabsList>
-                <TabsContent value="details" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Job Information</CardTitle>
-                            <CardDescription>General information about the job and vehicle.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <h4 className="font-semibold">Client Details</h4>
-                                    <div className="text-sm mt-1">Name: {jobCard.client_name}</div>
-                                    {/* Add other client details if available in API */}
+            {/* Tabs Navigation */}
+            <div className="border-b border-gray-200 flex gap-4">
+                <TabButton
+                    active={activeTab === 'overview'}
+                    label="Overview"
+                    icon={FileText}
+                    onClick={() => setActiveTab('overview')}
+                />
+                <TabButton
+                    active={activeTab === 'workflow'}
+                    label="Services"
+                    icon={Wrench}
+                    onClick={() => setActiveTab('workflow')}
+                />
+                <TabButton
+                    active={activeTab === 'parts'}
+                    label="Parts"
+                    icon={Package}
+                    onClick={() => setActiveTab('parts')}
+                />
+                <TabButton
+                    active={activeTab === 'financials'}
+                    label="Financials"
+                    icon={Banknote}
+                    onClick={() => setActiveTab('financials')}
+                />
+            </div>
+
+            {/* Tab Content */}
+            <AnimatePresence mode="wait">
+                {activeTab === 'overview' && (
+                    <motion.div
+                        key="overview"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                    >
+                        <DashboardCard title="Client Information">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 bg-gray-50 rounded-lg">
+                                        <User size={24} className="text-gray-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Name</p>
+                                        <p className="font-medium text-gray-900">{jobCard.client_name}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 className="font-semibold">Vehicle Details</h4>
-                                    <div className="text-sm mt-1">Reg No: {jobCard.registration_number}</div>
-                                    {/* Add other vehicle details if available */}
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div>
+                                        <p className="text-sm text-gray-500">Email</p>
+                                        <p className="font-medium text-gray-900">{jobCard.client_email || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Phone</p>
+                                        <p className="font-medium text-gray-900">{jobCard.client_phone || 'N/A'}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <Separator />
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <h4 className="font-semibold">Job Details</h4>
-                                    <div className="text-sm mt-1">Date Created: {new Date(jobCard.date_created).toLocaleDateString()}</div>
-                                    <div className="text-sm mt-1">Status: {jobCard.status}</div>
+                        </DashboardCard>
+
+                        <DashboardCard title="Vehicle Information">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 bg-gray-50 rounded-lg">
+                                        <Car size={24} className="text-gray-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Registration</p>
+                                        <p className="font-medium text-gray-900">{jobCard.registration_number}</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div>
+                                        <p className="text-sm text-gray-500">Make/Model</p>
+                                        <p className="font-medium text-gray-900">{jobCard.make || 'N/A'} {jobCard.model}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Mileage</p>
+                                        <p className="font-medium text-gray-900">{jobCard.speedometer_reading?.toLocaleString() || 'N/A'} km</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Fuel Level</p>
+                                        <p className="font-medium text-gray-900">{jobCard.fuel_tank_level || 'N/A'}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
+                        </DashboardCard>
+                    </motion.div>
+                )}
 
-                {/* Placeholder contents for other tabs */}
-                <TabsContent value="workflow">
-                    <Card>
-                        <CardHeader><CardTitle>Authorized Services & Defects</CardTitle></CardHeader>
-                        <CardContent>Workflow details comng soon</CardContent>
-                    </Card>
-                </TabsContent>
+                {activeTab === 'workflow' && (
+                    <motion.div
+                        key="workflow"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <DashboardCard title="Authorized Services" subtitle="Maintenance tasks for this job">
+                            <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <Wrench className="mx-auto mb-2 opacity-50" size={32} />
+                                <p>No service breakdown data available yet.</p>
+                            </div>
+                        </DashboardCard>
+                    </motion.div>
+                )}
 
-                <TabsContent value="parts">
-                    <Card>
-                        <CardHeader><CardTitle>Parts Used</CardTitle></CardHeader>
-                        <CardContent>Parts details coming soon</CardContent>
-                    </Card>
-                </TabsContent>
+                {activeTab === 'parts' && (
+                    <motion.div
+                        key="parts"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <DashboardCard title="Parts Used" subtitle="Inventory items allocated to this job">
+                            <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <Package className="mx-auto mb-2 opacity-50" size={32} />
+                                <p>No parts allocation data available yet.</p>
+                            </div>
+                        </DashboardCard>
+                    </motion.div>
+                )}
 
-                <TabsContent value="financials">
-                    <Card>
-                        <CardHeader><CardTitle>Payments & Financials</CardTitle></CardHeader>
-                        <CardContent>Financial details coming soon</CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-
-        </div>
+                {activeTab === 'financials' && (
+                    <motion.div
+                        key="financials"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <DashboardCard title="Financial Overview" subtitle="Payments and invoicing">
+                            <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <Banknote className="mx-auto mb-2 opacity-50" size={32} />
+                                <p>Financial breakdown data coming soon.</p>
+                            </div>
+                        </DashboardCard>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     )
 }

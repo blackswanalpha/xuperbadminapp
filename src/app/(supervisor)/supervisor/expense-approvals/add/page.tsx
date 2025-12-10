@@ -32,7 +32,7 @@ export default function AddExpensePage() {
         const loadVehicles = async () => {
             try {
                 const data = await fetchVehicles()
-                setVehicles(data)
+                setVehicles(data.vehicles)
             } catch (error) {
                 console.error('Error loading vehicles:', error)
             } finally {

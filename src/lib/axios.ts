@@ -10,14 +10,20 @@ const api = axios.create({
 // Add a request interceptor to attach the auth token if available
 api.interceptors.request.use(
     (config) => {
-        // TODO: Get token from storage/session
-        let token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        // Try multiple token keys for compatibility
+        let token = typeof window !== 'undefined' ? 
+            localStorage.getItem('access_token') || 
+            localStorage.getItem('token') || 
+            localStorage.getItem('authToken') : null;
 
         // For development: if no token exists, use a default admin token
         if (!token && typeof window !== 'undefined') {
             // This is a temporary development token - replace with proper login flow
             token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0OTE5MTA3LCJpYXQiOjE3NjQ4MzI3MDcsImp0aSI6ImI0N2E4ZjE1NGQ1ZjRkYWViNWQ5MTZkOGZmNzdkYzRhIiwidXNlcl9pZCI6MX0.OuVTUVmhkxWN_dalsIw_N0wd0XL19qGyIquIv7xpitY';
+            // Store token in all possible keys for consistency
             localStorage.setItem('token', token);
+            localStorage.setItem('access_token', token);
+            localStorage.setItem('authToken', token);
         }
 
         // Don't attach token for login/register endpoints

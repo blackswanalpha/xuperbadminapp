@@ -12,6 +12,8 @@ import {
   Package,
   Settings,
   BarChart3,
+  Truck,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -74,6 +76,18 @@ export const adminMenuItems: MenuItem[] = [
     title: 'Inventory Management',
     icon: Package,
     href: '/admin/inventory-management',
+  },
+  {
+    id: 'supplier-management',
+    title: 'Supplier Management',
+    icon: Truck,
+    href: '/admin/supplier-management',
+  },
+  {
+    id: 'garage-management',
+    title: 'Garage Management',
+    icon: Wrench,
+    href: '/admin/garage-management',
   },
   {
     id: 'analytics-section',

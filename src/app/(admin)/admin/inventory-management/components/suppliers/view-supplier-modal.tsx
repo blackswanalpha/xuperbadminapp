@@ -1,15 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { 
-  X, 
-  Building, 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Globe, 
-  FileText, 
+import {
+  X,
+  Building,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Globe,
+  FileText,
   Star,
   Package,
   TrendingUp,
@@ -27,10 +27,10 @@ interface ViewSupplierModalProps {
 export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierModalProps) {
   const getSupplierRating = () => {
     if (supplier.total_orders === 0) return 0
-    
+
     const onTimeDeliveryRate = supplier.on_time_deliveries / supplier.total_orders
     const qualityRate = 1 - (supplier.quality_issues / supplier.total_orders)
-    
+
     return Math.round((onTimeDeliveryRate * 0.6 + qualityRate * 0.4) * 5)
   }
 
@@ -77,7 +77,7 @@ export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierMod
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 content-center"
       onClick={onClose}
     >
       <motion.div
@@ -98,11 +98,10 @@ export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierMod
                 {supplier.name}
               </h2>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                  supplier.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                  supplier.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${supplier.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                    supplier.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                  }`}
               >
                 {supplier.status}
               </span>
@@ -204,7 +203,7 @@ export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierMod
                       </div>
                       <div>
                         <p className="text-sm" style={{ color: colors.textSecondary }}>Email Address</p>
-                        <a 
+                        <a
                           href={`mailto:${supplier.contact_email}`}
                           className="font-semibold hover:underline"
                           style={{ color: colors.adminPrimary }}
@@ -222,7 +221,7 @@ export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierMod
                       </div>
                       <div>
                         <p className="text-sm" style={{ color: colors.textSecondary }}>Phone Number</p>
-                        <a 
+                        <a
                           href={`tel:${supplier.contact_phone}`}
                           className="font-semibold hover:underline"
                           style={{ color: colors.adminPrimary }}
@@ -242,7 +241,7 @@ export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierMod
                       </div>
                       <div>
                         <p className="text-sm" style={{ color: colors.textSecondary }}>Website</p>
-                        <a 
+                        <a
                           href={supplier.website}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -378,7 +377,7 @@ export default function ViewSupplierModal({ supplier, onClose }: ViewSupplierMod
                   <h4 className="font-semibold text-red-800">Quality Alert</h4>
                 </div>
                 <p className="text-red-700 text-sm">
-                  This supplier has {supplier.quality_issues} reported quality issues out of {supplier.total_orders} total orders. 
+                  This supplier has {supplier.quality_issues} reported quality issues out of {supplier.total_orders} total orders.
                   Consider reviewing their quality assurance processes.
                 </p>
               </div>

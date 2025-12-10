@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
     ArrowLeft,
@@ -15,7 +15,10 @@ import {
     User,
     CheckCircle,
     Clock,
-    AlertCircle
+    AlertCircle,
+    ChevronDown,
+    Save,
+    X
 } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
@@ -31,26 +34,129 @@ export default function MaintenanceDetailPage() {
 
     const [loading, setLoading] = useState(true)
     const [maintenance, setMaintenance] = useState<any>(null)
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+    const [newStatus, setNewStatus] = useState('')
 
     useEffect(() => {
         loadMaintenanceData()
     }, [maintenanceId])
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showStatusDropdown) {
+                const target = event.target as Element
+                if (!target.closest('.status-dropdown-container')) {
+                    setShowStatusDropdown(false)
+                    setNewStatus('')
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showStatusDropdown])
+
     const loadMaintenanceData = async () => {
         try {
             setLoading(true)
-            const token = localStorage.getItem('access_token')
+            // Try multiple token keys for compatibility
+            const token = localStorage.getItem('access_token') || 
+                         localStorage.getItem('token') || 
+                         localStorage.getItem('authToken')
+            
             const response = await axios.get(`${API_BASE_URL}/maintenance/${maintenanceId}/`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             })
             setMaintenance(response.data)
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading maintenance data:', error)
+            
+            // If unauthorized, try to refresh or redirect
+            if (error?.response?.status === 401) {
+                // Clear potentially invalid tokens
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('token')
+                localStorage.removeItem('authToken')
+                
+                // Redirect to login or show error
+                console.warn('Authentication failed - please log in again')
+            }
         } finally {
             setLoading(false)
         }
+    }
+
+    const updateMaintenanceStatus = async (status: string) => {
+        try {
+            setIsUpdatingStatus(true)
+            const token = localStorage.getItem('access_token') || 
+                         localStorage.getItem('token') || 
+                         localStorage.getItem('authToken')
+            
+            const updateData: any = {
+                status: status
+            }
+
+            // If marking as completed, set completion date
+            if (status === 'completed') {
+                updateData.completed_date = new Date().toISOString()
+            }
+
+            const response = await axios.patch(
+                `${API_BASE_URL}/maintenance/${maintenanceId}/`, 
+                updateData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            )
+            
+            setMaintenance(response.data)
+            setShowStatusDropdown(false)
+            setNewStatus('')
+            
+        } catch (error: any) {
+            console.error('Error updating maintenance status:', error)
+            
+            if (error?.response?.status === 401) {
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('token')
+                localStorage.removeItem('authToken')
+                console.warn('Authentication failed - please log in again')
+            }
+        } finally {
+            setIsUpdatingStatus(false)
+        }
+    }
+
+    const statusOptions = [
+        { value: 'scheduled', label: 'Scheduled', color: 'bg-yellow-100 text-yellow-800' },
+        { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
+        { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
+        { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
+    ]
+
+    const handleStatusChange = (status: string) => {
+        if (status !== maintenance.status) {
+            setNewStatus(status)
+        }
+    }
+
+    const confirmStatusUpdate = () => {
+        if (newStatus && newStatus !== maintenance.status) {
+            updateMaintenanceStatus(newStatus)
+        }
+    }
+
+    const cancelStatusUpdate = () => {
+        setShowStatusDropdown(false)
+        setNewStatus('')
     }
 
     if (loading) {
@@ -116,10 +222,92 @@ export default function MaintenanceDetailPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${getStatusColor(maintenance.status)}`}>
-                        <StatusIcon size={16} />
-                        {maintenance.status.replace('_', ' ').toUpperCase()}
-                    </span>
+                    {/* Status Display/Update */}
+                    <div className="relative status-dropdown-container">
+                        <button
+                            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                            disabled={isUpdatingStatus}
+                            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-colors hover:shadow-md ${getStatusColor(maintenance.status)} ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                            <StatusIcon size={16} />
+                            {maintenance.status.replace('_', ' ').toUpperCase()}
+                            <ChevronDown size={14} className={`transform transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {/* Status Dropdown */}
+                        <AnimatePresence>
+                            {showStatusDropdown && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50"
+                                >
+                                    <div className="p-4">
+                                        <h4 className="text-sm font-semibold text-gray-800 mb-3">Update Maintenance Status</h4>
+                                        <div className="space-y-2">
+                                            {statusOptions.map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => handleStatusChange(option.value)}
+                                                    className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
+                                                        newStatus === option.value 
+                                                            ? 'border-blue-500 bg-blue-50' 
+                                                            : maintenance.status === option.value 
+                                                                ? 'border-gray-300 bg-gray-50' 
+                                                                : 'border-gray-200 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex-1 text-left">
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${option.color}`}>
+                                                            {option.label}
+                                                        </span>
+                                                        {maintenance.status === option.value && (
+                                                            <span className="text-xs text-gray-500 block mt-1">Current status</span>
+                                                        )}
+                                                        {newStatus === option.value && newStatus !== maintenance.status && (
+                                                            <span className="text-xs text-blue-600 block mt-1">Selected for update</span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Action Buttons */}
+                                        {newStatus && newStatus !== maintenance.status && (
+                                            <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
+                                                <button
+                                                    onClick={cancelStatusUpdate}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                >
+                                                    <X size={16} />
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={confirmStatusUpdate}
+                                                    disabled={isUpdatingStatus}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                                                >
+                                                    {isUpdatingStatus ? (
+                                                        <>
+                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                            Updating...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Save size={16} />
+                                                            Update
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
 

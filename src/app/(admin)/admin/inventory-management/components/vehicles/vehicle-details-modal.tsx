@@ -132,7 +132,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
               Purchase Price
             </label>
             <p className="text-base font-semibold" style={{ color: colors.textPrimary }}>
-              {vehicleDetails?.vehicle_info.purchase_price 
+              {vehicleDetails?.vehicle_info.purchase_price
                 ? formatCurrency(parseFloat(vehicleDetails.vehicle_info.purchase_price))
                 : 'N/A'
               }
@@ -143,7 +143,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
               Current Value
             </label>
             <p className="text-base font-semibold" style={{ color: colors.textPrimary }}>
-              {vehicleDetails?.vehicle_info.current_value 
+              {vehicleDetails?.vehicle_info.current_value
                 ? formatCurrency(parseFloat(vehicleDetails.vehicle_info.current_value))
                 : 'N/A'
               }
@@ -154,7 +154,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
               Maintenance Cost
             </label>
             <p className="text-base font-semibold" style={{ color: colors.textPrimary }}>
-              {vehicleDetails?.vehicle_info.maintenance_cost 
+              {vehicleDetails?.vehicle_info.maintenance_cost
                 ? formatCurrency(parseFloat(vehicleDetails.vehicle_info.maintenance_cost))
                 : 'KSh 0'
               }
@@ -165,7 +165,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
               Daily Rate
             </label>
             <p className="text-base font-semibold" style={{ color: colors.textPrimary }}>
-              {vehicleDetails?.vehicle_info.daily_rate 
+              {vehicleDetails?.vehicle_info.daily_rate
                 ? formatCurrency(parseFloat(vehicleDetails.vehicle_info.daily_rate))
                 : 'N/A'
               }
@@ -251,11 +251,11 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
                     <span
                       className="px-2 py-1 rounded text-xs font-medium"
                       style={{
-                        backgroundColor: contract.status === 'COMPLETED' 
-                          ? `${colors.adminSuccess}20` 
+                        backgroundColor: contract.status === 'COMPLETED'
+                          ? `${colors.adminSuccess}20`
                           : `${colors.adminPrimary}20`,
-                        color: contract.status === 'COMPLETED' 
-                          ? colors.adminSuccess 
+                        color: contract.status === 'COMPLETED'
+                          ? colors.adminSuccess
                           : colors.adminPrimary,
                       }}
                     >
@@ -284,7 +284,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
                 Last Inspection
               </label>
               <p style={{ color: colors.textPrimary }}>
-                {vehicleDetails?.vehicle_info.last_inspection 
+                {vehicleDetails?.vehicle_info.last_inspection
                   ? formatDate(vehicleDetails.vehicle_info.last_inspection)
                   : 'N/A'
                 }
@@ -295,7 +295,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
                 Next Inspection
               </label>
               <p style={{ color: colors.textPrimary }}>
-                {vehicleDetails?.vehicle_info.next_inspection 
+                {vehicleDetails?.vehicle_info.next_inspection
                   ? formatDate(vehicleDetails.vehicle_info.next_inspection)
                   : 'N/A'
                 }
@@ -310,7 +310,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
           </h3>
           <div className="space-y-2">
             {vehicleDetails?.location_history.map((location, index) => (
-              <div 
+              <div
                 key={index}
                 className={`p-3 rounded-lg border ${location.is_current ? 'border-green-300 bg-green-50' : ''}`}
                 style={{ borderColor: location.is_current ? colors.adminSuccess : colors.borderLight }}
@@ -325,9 +325,9 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
                     </p>
                   </div>
                   {location.is_current && (
-                    <span className="text-xs px-2 py-1 rounded" style={{ 
+                    <span className="text-xs px-2 py-1 rounded" style={{
                       backgroundColor: `${colors.adminSuccess}20`,
-                      color: colors.adminSuccess 
+                      color: colors.adminSuccess
                     }}>
                       Current
                     </span>
@@ -365,11 +365,11 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
                   <span
                     className="text-xs px-2 py-1 rounded"
                     style={{
-                      backgroundColor: record.status === 'COMPLETED' 
-                        ? `${colors.adminSuccess}20` 
+                      backgroundColor: record.status === 'COMPLETED'
+                        ? `${colors.adminSuccess}20`
                         : `${colors.adminWarning}20`,
-                      color: record.status === 'COMPLETED' 
-                        ? colors.adminSuccess 
+                      color: record.status === 'COMPLETED'
+                        ? colors.adminSuccess
                         : colors.adminWarning,
                     }}
                   >
@@ -404,13 +404,13 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
               <span
                 className="px-3 py-1 rounded-full text-sm font-medium"
                 style={{
-                  backgroundColor: doc.status_color === 'success' 
-                    ? `${colors.adminSuccess}20` 
+                  backgroundColor: doc.status_color === 'success'
+                    ? `${colors.adminSuccess}20`
                     : doc.status_color === 'warning'
                       ? `${colors.adminWarning}20`
                       : `${colors.adminError}20`,
-                  color: doc.status_color === 'success' 
-                    ? colors.adminSuccess 
+                  color: doc.status_color === 'success'
+                    ? colors.adminSuccess
                     : doc.status_color === 'warning'
                       ? colors.adminWarning
                       : colors.adminError,
@@ -468,7 +468,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <motion.div
@@ -486,7 +486,7 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
             </h2>
             {vehicleDetails && (
               <p style={{ color: colors.textSecondary }}>
-                {vehicleDetails.vehicle_info.year} {vehicleDetails.vehicle_info.make} {vehicleDetails.vehicle_info.model} 
+                {vehicleDetails.vehicle_info.year} {vehicleDetails.vehicle_info.make} {vehicleDetails.vehicle_info.model}
                 • {vehicleDetails.vehicle_info.registration_number}
               </p>
             )}
@@ -505,11 +505,10 @@ export default function VehicleDetailsModal({ vehicleId, onClose }: VehicleDetai
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeSection === section.id
+              className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors ${activeSection === section.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <section.icon size={16} />
               {section.label}
