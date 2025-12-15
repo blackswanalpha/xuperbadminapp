@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://xuperb.spinwish.tech/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -16,15 +16,8 @@ api.interceptors.request.use(
             localStorage.getItem('token') || 
             localStorage.getItem('authToken') : null;
 
-        // For development: if no token exists, use a default admin token
-        if (!token && typeof window !== 'undefined') {
-            // This is a temporary development token - replace with proper login flow
-            token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0OTE5MTA3LCJpYXQiOjE3NjQ4MzI3MDcsImp0aSI6ImI0N2E4ZjE1NGQ1ZjRkYWViNWQ5MTZkOGZmNzdkYzRhIiwidXNlcl9pZCI6MX0.OuVTUVmhkxWN_dalsIw_N0wd0XL19qGyIquIv7xpitY';
-            // Store token in all possible keys for consistency
-            localStorage.setItem('token', token);
-            localStorage.setItem('access_token', token);
-            localStorage.setItem('authToken', token);
-        }
+        // Note: For production, tokens should be obtained through proper login flow
+        // The admin app will need to authenticate with the backend first
 
         // Don't attach token for login/register endpoints
         if (token && !config.url?.includes('/auth/login') && !config.url?.includes('/auth/register')) {
