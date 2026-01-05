@@ -139,6 +139,28 @@ export const deleteSupplier = async (id: string): Promise<void> => {
     }
 };
 
+export interface GeneralSupplierStats {
+    total_suppliers: number;
+    total_purchases: number;
+    total_outstanding: number;
+    total_vehicles_supplied: number;
+}
+
+export const fetchGeneralSupplierStats = async (): Promise<GeneralSupplierStats> => {
+    try {
+        const response = await api.get('/suppliers/statistics/');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching supplier statistics:', error);
+        return {
+            total_suppliers: 0,
+            total_purchases: 0,
+            total_outstanding: 0,
+            total_vehicles_supplied: 0,
+        };
+    }
+};
+
 import { SupplierItem, AccountsPayable, SupplierPayment } from '@/types/supplier';
 
 export const fetchSupplierItems = async (supplierId: string): Promise<SupplierItem[]> => {
@@ -515,6 +537,130 @@ export const fetchInventoryItem = async (vehicleId: number): Promise<InventoryIt
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory item:', error);
+        throw error;
+    }
+};
+
+// Quick Management API Interface
+
+export interface Invoice {
+    id: string;
+    client: string;
+    client_name?: string;
+    amount: number;
+    status: 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED';
+    created_date: string;
+    due_date: string;
+    items?: any[];
+}
+
+export interface Expense {
+    id: string;
+    type: string;
+    category: string;
+    description?: string;
+    amount: number;
+    status: string;
+    date: string;
+    vehicle_registration?: string;
+    item_name?: string;
+}
+
+export interface InvoiceAnalytics {
+    total_invoices: number;
+    paid_invoices: number;
+    pending_invoices: number;
+    overdue_invoices: number;
+    total_revenue: number;
+    pending_amount: number;
+    overdue_amount: number;
+}
+
+export interface FinancialAnalysis {
+    total_revenue: number;
+    total_expenses: number;
+    net_profit: number;
+    revenue_growth: number;
+    expense_growth: number;
+    profit_growth: number;
+    expense_breakdown: {
+        category: string;
+        amount: number;
+        count: number;
+    }[];
+    period: {
+        start_date: string;
+        end_date: string;
+        days: number;
+    };
+}
+
+// Quick Management API Functions
+
+export const fetchInvoices = async (filters?: { search?: string, status?: string }): Promise<Invoice[]> => {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.status) params.append('status', filters.status);
+
+    const response = await api.get<Invoice[]>(`/invoices/?${params.toString()}`);
+    return response.data;
+};
+
+export const fetchAllExpenses = async (): Promise<Expense[]> => {
+    const response = await api.get<any[]>('/expenses/all-expenses/');
+    return response.data.map(item => ({
+        id: item.id,
+        type: item.type,
+        category: item.category,
+        description: item.notes || item.item_name || item.type,
+        amount: item.total_amount,
+        status: item.status,
+        date: item.created_at,
+        vehicle_registration: item.vehicle_registration,
+    }));
+};
+
+export const fetchInvoiceAnalytics = async (params?: { start_date?: string, end_date?: string }): Promise<InvoiceAnalytics> => {
+    const queryParams = new URLSearchParams();
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+
+    const response = await api.get<InvoiceAnalytics>(`/invoices/analytics/?${queryParams.toString()}`);
+    return response.data;
+};
+
+export const fetchFinancialAnalysis = async (days: number = 30): Promise<FinancialAnalysis> => {
+    const response = await api.get<FinancialAnalysis>(`/invoices/financial_analysis/?days=${days}`);
+    return response.data;
+};
+
+export const createInvoice = async (data: any): Promise<Invoice> => {
+    try {
+        const response = await api.post('/invoices/', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating invoice:', error);
+        throw error;
+    }
+};
+
+export const fetchVehiclesForSelect = async (): Promise<Vehicle[]> => {
+    try {
+        // Fetch a large number of vehicles for dropdown
+        const response = await api.get<{ vehicles: Vehicle[] }>('/vehicles/?page_size=100');
+        return response.data.vehicles;
+    } catch (error) {
+        console.error('Error fetching vehicles for select:', error);
+        throw error;
+    }
+};
+
+export const fetchContractsForSelect = async (): Promise<Contract[]> => {
+    try {
+        const response = await api.get('/contracts/?limit=100&status=ACTIVE');
+        return response.data.results || response.data;
+    } catch (error) {
+        console.error('Error fetching contracts for select:', error);
         throw error;
     }
 };

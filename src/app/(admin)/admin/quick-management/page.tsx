@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
@@ -23,13 +23,27 @@ import StatCard from '@/components/shared/stat-card'
 import { Tabs, TabPanel } from '@/components/shared/tabs'
 import DeleteConfirmationModal from '@/components/shared/delete-confirmation-modal'
 import { colors } from '@/lib/theme/colors'
-import { mockInvoices, mockExpenses, mockActivityItems } from '@/data/quick-management-mock'
-import type { Invoice, Expense } from '@/types/quick-management'
+import {
+  fetchInvoices,
+  fetchAllExpenses,
+  fetchFinancialAnalysis,
+  fetchRecentActivities,
+  Invoice,
+  Expense,
+  FinancialAnalysis,
+  RecentActivitiesResponse,
+  Activity
+} from '@/lib/api'
 
 export default function QuickManagementPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [financialAnalysis, setFinancialAnalysis] = useState<FinancialAnalysis | null>(null)
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     type: 'invoice' | 'expense' | null
@@ -43,13 +57,36 @@ export default function QuickManagementPage() {
   })
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Calculate stats from mock data
-  const totalInvoices = mockInvoices.length
-  const totalExpenses = mockExpenses.reduce((sum, exp) => sum + exp.amount, 0)
-  const totalRevenue = mockInvoices.reduce((sum, inv) => sum + inv.amount, 0)
-  const netRevenue = totalRevenue - totalExpenses
-  const pendingInvoices = mockInvoices.filter((inv) => inv.status === 'Pending').length
-  const pendingExpenses = mockExpenses.filter((exp) => exp.status === 'Pending').length
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        const [invoicesData, expensesData, analysisData, activitiesData] = await Promise.all([
+          fetchInvoices(),
+          fetchAllExpenses(),
+          fetchFinancialAnalysis(),
+          fetchRecentActivities()
+        ])
+        setInvoices(invoicesData)
+        setExpenses(expensesData)
+        setFinancialAnalysis(analysisData)
+        setRecentActivities(activitiesData.activities)
+      } catch (error) {
+        console.error('Failed to load quick management data', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  // Calculate stats
+  const totalInvoices = invoices.length
+  const totalExpenses = financialAnalysis?.total_expenses || expenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const totalRevenue = financialAnalysis?.total_revenue || invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  const netRevenue = financialAnalysis?.net_profit || (totalRevenue - totalExpenses)
+  const pendingInvoices = invoices.filter((inv) => inv.status === 'PENDING').length
+  const pendingExpenses = expenses.filter((exp) => exp.status.toLowerCase() === 'pending').length
   const pendingItems = pendingInvoices + pendingExpenses
 
   const tabs = [
@@ -62,7 +99,7 @@ export default function QuickManagementPage() {
   const formatCurrency = (amount: number) => `KSh ${amount.toLocaleString()}`
 
   const handleDeleteInvoice = (id: string) => {
-    const invoice = mockInvoices.find((inv) => inv.id === id)
+    const invoice = invoices.find((inv) => inv.id === id)
     if (!invoice) return
 
     setDeleteModal({
@@ -71,15 +108,15 @@ export default function QuickManagementPage() {
       id,
       details: [
         { label: 'Invoice ID', value: invoice.id },
-        { label: 'Client', value: invoice.clientName },
+        { label: 'Client', value: invoice.client_name || 'Client' },
         { label: 'Amount', value: formatCurrency(invoice.amount) },
-        { label: 'Date', value: invoice.date },
+        { label: 'Date', value: invoice.created_date },
       ],
     })
   }
 
   const handleDeleteExpense = (id: string) => {
-    const expense = mockExpenses.find((exp) => exp.id === id)
+    const expense = expenses.find((exp) => exp.id === id)
     if (!expense) return
 
     setDeleteModal({
@@ -89,7 +126,7 @@ export default function QuickManagementPage() {
       details: [
         { label: 'Expense ID', value: expense.id },
         { label: 'Category', value: expense.category },
-        { label: 'Description', value: expense.description },
+        { label: 'Description', value: expense.description || 'N/A' },
         { label: 'Amount', value: formatCurrency(expense.amount) },
         { label: 'Date', value: expense.date },
       ],
@@ -176,7 +213,7 @@ export default function QuickManagementPage() {
             <DashboardCard title="Quick Actions">
               <div className="space-y-3">
                 <button
-                  onClick={() => router.push('/dashboard/quick-management/invoices/create')}
+                  onClick={() => router.push('/admin/quick-management/invoices/create')}
                   className="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed hover:border-solid transition-all"
                   style={{ borderColor: colors.adminPrimary, color: colors.adminPrimary }}
                 >
@@ -184,7 +221,7 @@ export default function QuickManagementPage() {
                   <span className="font-medium">Create New Invoice</span>
                 </button>
                 <button
-                  onClick={() => router.push('/dashboard/quick-management/expenses/create')}
+                  onClick={() => router.push('/admin/quick-management/expenses/create')}
                   className="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed hover:border-solid transition-all"
                   style={{ borderColor: colors.adminSuccess, color: colors.adminSuccess }}
                 >
@@ -203,7 +240,7 @@ export default function QuickManagementPage() {
           >
             <DashboardCard title="Recent Activity" subtitle="Latest updates">
               <div className="space-y-3">
-                {mockActivityItems.slice(0, 5).map((activity, index) => (
+                {recentActivities.slice(0, 5).map((activity, index) => (
                   <motion.div
                     key={activity.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -215,16 +252,16 @@ export default function QuickManagementPage() {
                       className="w-2 h-2 rounded-full"
                       style={{
                         backgroundColor:
-                          activity.status === 'Paid' || activity.status === 'Approved'
+                          activity.type === 'payment' || activity.type === 'invoice_paid'
                             ? colors.adminSuccess
-                            : activity.status === 'Pending'
-                            ? colors.adminWarning
-                            : colors.adminError,
+                            : activity.type === 'task'
+                              ? colors.adminWarning
+                              : colors.adminError,
                       }}
                     />
                     <div className="flex-1">
                       <p className="text-sm" style={{ color: colors.textPrimary }}>
-                        {activity.action}
+                        {activity.title}
                       </p>
                       <p className="text-xs" style={{ color: colors.textTertiary }}>
                         {activity.time}
@@ -241,12 +278,15 @@ export default function QuickManagementPage() {
   }
 
   const renderAnalysisTab = () => {
-    const totalPaidInvoices = mockInvoices.filter((inv) => inv.status === 'Paid').length
-    const totalApprovedExpenses = mockExpenses.filter((exp) => exp.status === 'Approved').length
+    const totalPaidInvoices = invoices.filter((inv) => inv.status === 'PAID').length
+    const totalApprovedExpenses = expenses.filter((exp) => exp.status.toLowerCase() === 'approved').length
     const avgInvoiceValue = totalRevenue / totalInvoices
     const profitMargin = ((netRevenue / totalRevenue) * 100).toFixed(1)
 
-    const expensesByCategory = mockExpenses.reduce((acc, exp) => {
+    const expensesByCategory = financialAnalysis?.expense_breakdown.reduce((acc, item) => {
+      acc[item.category] = item.amount
+      return acc
+    }, {} as Record<string, number>) || expenses.reduce((acc, exp) => {
       acc[exp.category] = (acc[exp.category] || 0) + exp.amount
       return acc
     }, {} as Record<string, number>)
@@ -303,7 +343,7 @@ export default function QuickManagementPage() {
               title="Approved Expenses"
               value={totalApprovedExpenses.toString()}
               icon={Wrench}
-              trend={{ value: `${totalApprovedExpenses}/${mockExpenses.length}`, isPositive: true }}
+              trend={{ value: `${totalApprovedExpenses}/${expenses.length}`, isPositive: true }}
               color={colors.adminWarning}
             />
           </motion.div>
@@ -381,8 +421,8 @@ export default function QuickManagementPage() {
                     category === 'Service'
                       ? colors.adminPrimary
                       : category === 'Bodywork'
-                      ? colors.adminWarning
-                      : colors.adminAccent
+                        ? colors.adminWarning
+                        : colors.adminAccent
 
                   return (
                     <div key={category}>
@@ -435,11 +475,11 @@ export default function QuickManagementPage() {
   }
 
   const renderExpensesTab = () => {
-    const filteredExpenses = mockExpenses.filter(
+    const filteredExpenses = expenses.filter(
       (expense) =>
         expense.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        expense.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        expense.vehicleName.toLowerCase().includes(searchQuery.toLowerCase())
+        (expense.description && expense.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (expense.vehicle_registration && expense.vehicle_registration.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
     return (
@@ -470,7 +510,7 @@ export default function QuickManagementPage() {
                   />
                 </div>
                 <button
-                  onClick={() => router.push('/dashboard/quick-management/expenses/create')}
+                  onClick={() => router.push('/admin/quick-management/expenses/create')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
                   style={{ backgroundColor: colors.adminSuccess }}
                 >
@@ -528,21 +568,21 @@ export default function QuickManagementPage() {
                               expense.category === 'Service'
                                 ? `${colors.adminPrimary}20`
                                 : expense.category === 'Bodywork'
-                                ? `${colors.adminWarning}20`
-                                : `${colors.adminAccent}20`,
+                                  ? `${colors.adminWarning}20`
+                                  : `${colors.adminAccent}20`,
                             color:
                               expense.category === 'Service'
                                 ? colors.adminPrimary
                                 : expense.category === 'Bodywork'
-                                ? colors.adminWarning
-                                : colors.adminAccent,
+                                  ? colors.adminWarning
+                                  : colors.adminAccent,
                           }}
                         >
                           {expense.category}
                         </span>
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {expense.description}
+                        {expense.description || 'N/A'}
                       </td>
                       <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
                         {formatCurrency(expense.amount)}
@@ -552,17 +592,17 @@ export default function QuickManagementPage() {
                           className="px-3 py-1 rounded-full text-xs font-medium"
                           style={{
                             backgroundColor:
-                              expense.status === 'Approved'
+                              expense.status.toLowerCase() === 'approved'
                                 ? `${colors.adminSuccess}20`
-                                : expense.status === 'Pending'
-                                ? `${colors.adminWarning}20`
-                                : `${colors.adminError}20`,
+                                : expense.status.toLowerCase() === 'pending'
+                                  ? `${colors.adminWarning}20`
+                                  : `${colors.adminError}20`,
                             color:
-                              expense.status === 'Approved'
+                              expense.status.toLowerCase() === 'approved'
                                 ? colors.adminSuccess
-                                : expense.status === 'Pending'
-                                ? colors.adminWarning
-                                : colors.adminError,
+                                : expense.status.toLowerCase() === 'pending'
+                                  ? colors.adminWarning
+                                  : colors.adminError,
                           }}
                         >
                           {expense.status}
@@ -574,14 +614,14 @@ export default function QuickManagementPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => router.push(`/dashboard/quick-management/expenses/${expense.id}`)}
+                            onClick={() => router.push(`/admin/quick-management/expenses/${expense.id}`)}
                             className="p-1.5 rounded hover:bg-gray-100 transition-colors"
                             title="View"
                           >
                             <Eye size={16} style={{ color: colors.textSecondary }} />
                           </button>
                           <button
-                            onClick={() => router.push(`/dashboard/quick-management/expenses/${expense.id}/edit`)}
+                            onClick={() => router.push(`/admin/quick-management/expenses/${expense.id}/edit`)}
                             className="p-1.5 rounded hover:bg-gray-100 transition-colors"
                             title="Edit"
                           >
@@ -608,10 +648,10 @@ export default function QuickManagementPage() {
   }
 
   const renderInvoicesTab = () => {
-    const filteredInvoices = mockInvoices.filter(
+    const filteredInvoices = invoices.filter(
       (invoice) =>
         invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        invoice.clientName.toLowerCase().includes(searchQuery.toLowerCase())
+        (invoice.client_name && invoice.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
     return (
@@ -642,7 +682,7 @@ export default function QuickManagementPage() {
                   />
                 </div>
                 <button
-                  onClick={() => router.push('/dashboard/quick-management/invoices/create')}
+                  onClick={() => router.push('/admin/quick-management/invoices/create')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
                   style={{ backgroundColor: colors.adminPrimary }}
                 >
@@ -690,7 +730,7 @@ export default function QuickManagementPage() {
                         {invoice.id}
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {invoice.clientName}
+                        {invoice.client_name || invoice.client}
                       </td>
                       <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
                         {formatCurrency(invoice.amount)}
@@ -700,36 +740,36 @@ export default function QuickManagementPage() {
                           className="px-3 py-1 rounded-full text-xs font-medium"
                           style={{
                             backgroundColor:
-                              invoice.status === 'Paid'
+                              invoice.status === 'PAID'
                                 ? `${colors.adminSuccess}20`
-                                : invoice.status === 'Pending'
-                                ? `${colors.adminWarning}20`
-                                : `${colors.adminError}20`,
+                                : invoice.status === 'PENDING'
+                                  ? `${colors.adminWarning}20`
+                                  : `${colors.adminError}20`,
                             color:
-                              invoice.status === 'Paid'
+                              invoice.status === 'PAID'
                                 ? colors.adminSuccess
-                                : invoice.status === 'Pending'
-                                ? colors.adminWarning
-                                : colors.adminError,
+                                : invoice.status === 'PENDING'
+                                  ? colors.adminWarning
+                                  : colors.adminError,
                           }}
                         >
                           {invoice.status}
                         </span>
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {invoice.date}
+                        {invoice.created_date}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => router.push(`/dashboard/quick-management/invoices/${invoice.id}`)}
+                            onClick={() => router.push(`/admin/quick-management/invoices/${invoice.id}`)}
                             className="p-1.5 rounded hover:bg-gray-100 transition-colors"
                             title="View"
                           >
                             <Eye size={16} style={{ color: colors.textSecondary }} />
                           </button>
                           <button
-                            onClick={() => router.push(`/dashboard/quick-management/invoices/${invoice.id}/edit`)}
+                            onClick={() => router.push(`/admin/quick-management/invoices/${invoice.id}/edit`)}
                             className="p-1.5 rounded hover:bg-gray-100 transition-colors"
                             title="Edit"
                           >

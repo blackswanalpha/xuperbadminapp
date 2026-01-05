@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchSuppliers, createSupplier, Supplier } from '@/lib/api'
+import { fetchSuppliers, createSupplier, deleteSupplier, fetchGeneralSupplierStats, Supplier, GeneralSupplierStats } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { Package, Plus, Search, Eye, Edit, Trash2, Phone, Mail, MapPin, User } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
@@ -18,6 +18,7 @@ export default function SupplierManagementPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+  const [supplierStats, setSupplierStats] = useState<GeneralSupplierStats | null>(null)
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -70,6 +71,9 @@ export default function SupplierManagementPage() {
       const data = await fetchSuppliers()
       setSuppliers(data)
       setFilteredSuppliers(data)
+
+      const stats = await fetchGeneralSupplierStats()
+      setSupplierStats(stats)
     } catch (err) {
       setError('Failed to load suppliers')
       console.error(err)
@@ -81,7 +85,7 @@ export default function SupplierManagementPage() {
   const stats = [
     {
       title: 'Total Suppliers',
-      value: suppliers.length.toString(),
+      value: supplierStats?.total_suppliers?.toString() || suppliers.length.toString(),
       icon: Package,
       trend: { value: '+2', isPositive: true },
       color: colors.adminPrimary,
@@ -102,7 +106,7 @@ export default function SupplierManagementPage() {
     },
     {
       title: 'Total Vehicles Supplied',
-      value: '45', // This would come from an API endpoint
+      value: supplierStats?.total_vehicles_supplied?.toString() || '0',
       icon: Package,
       trend: { value: '+5', isPositive: true },
       color: colors.adminAccent,
@@ -425,10 +429,21 @@ export default function SupplierManagementPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // Handle delete
-                  setDeleteModalOpen(false)
-                  setSelectedSupplier(null)
+                onClick={async () => {
+                  if (selectedSupplier) {
+                    try {
+                      await deleteSupplier(selectedSupplier.id)
+                      // Remove from local state to avoid full reload flicker
+                      setSuppliers(prev => prev.filter(s => s.id !== selectedSupplier.id))
+                      setFilteredSuppliers(prev => prev.filter(s => s.id !== selectedSupplier.id))
+
+                      setDeleteModalOpen(false)
+                      setSelectedSupplier(null)
+                    } catch (err) {
+                      console.error('Failed to delete supplier', err)
+                      alert('Failed to delete supplier. Please try again.')
+                    }
+                  }
                 }}
                 className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: colors.adminError }}

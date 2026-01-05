@@ -480,7 +480,7 @@ export default function GarageManagementPage() {
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {equipment.map((item, index) => (
+        {Array.isArray(equipment) && equipment.map((item, index) => (
           <motion.div
             key={item.id}
             initial={{ opacity: 0, scale: 0.9 }}
@@ -516,6 +516,11 @@ export default function GarageManagementPage() {
             )}
           </motion.div>
         ))}
+        {!Array.isArray(equipment) || equipment.length === 0 && (
+          <div className="col-span-full text-center py-8 text-gray-500">
+            No equipment found.
+          </div>
+        )}
       </div>
     </DashboardCard>
   )
