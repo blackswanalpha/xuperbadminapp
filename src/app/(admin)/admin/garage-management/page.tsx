@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Wrench, 
-  Package, 
-  ClipboardList, 
-  Users, 
-  Clock, 
-  AlertTriangle, 
+import {
+  Wrench,
+  Package,
+  ClipboardList,
+  Users,
+  Clock,
+  AlertTriangle,
   CheckCircle,
   Plus,
   Search,
@@ -19,6 +19,7 @@ import {
 import DashboardCard from '@/components/shared/dashboard-card'
 import StatCard from '@/components/shared/stat-card'
 import { colors } from '@/lib/theme/colors'
+import { fetchJobCards, fetchEquipmentList, Equipment } from '@/lib/api'
 
 interface JobCard {
   id: string
@@ -36,109 +37,57 @@ interface JobCard {
   estimated_completion?: string
 }
 
-interface Equipment {
-  id: string
-  name: string
-  type: 'TOOL' | 'MACHINERY' | 'DIAGNOSTIC'
-  status: 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'OUT_OF_ORDER'
-  last_maintenance?: string
-  next_maintenance?: string
-}
-
 export default function GarageManagementPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'job-cards' | 'equipment' | 'reports'>('overview')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  
-  // Mock data - these would come from API calls
-  const [jobCards, setJobCards] = useState<JobCard[]>([
-    {
-      id: 'JC-001',
-      vehicle_registration: 'KCA 123A',
-      vehicle_make_model: 'Toyota Corolla',
-      customer_name: 'John Doe',
-      issue_description: 'Engine making strange noise, needs diagnostic check',
-      status: 'IN_PROGRESS',
-      priority: 'HIGH',
-      assigned_mechanic: 'Mike Johnson',
-      estimated_cost: 15000,
-      actual_cost: 12500,
-      date_created: '2024-12-08',
-      estimated_completion: '2024-12-10'
-    },
-    {
-      id: 'JC-002',
-      vehicle_registration: 'KBX 456B',
-      vehicle_make_model: 'Nissan X-Trail',
-      customer_name: 'Jane Smith',
-      issue_description: 'Brake pad replacement and brake fluid change',
-      status: 'PENDING',
-      priority: 'MEDIUM',
-      estimated_cost: 8000,
-      date_created: '2024-12-09'
-    },
-    {
-      id: 'JC-003',
-      vehicle_registration: 'KCB 789C',
-      vehicle_make_model: 'Honda Fit',
-      customer_name: 'Peter Wilson',
-      issue_description: 'Oil change and filter replacement',
-      status: 'COMPLETED',
-      priority: 'LOW',
-      assigned_mechanic: 'James Brown',
-      estimated_cost: 3000,
-      actual_cost: 3200,
-      date_created: '2024-12-07',
-      date_completed: '2024-12-08'
-    }
-  ])
+  const [error, setError] = useState<string | null>(null)
 
-  const [equipment, setEquipment] = useState<Equipment[]>([
-    {
-      id: 'EQ-001',
-      name: 'Hydraulic Car Lift',
-      type: 'MACHINERY',
-      status: 'AVAILABLE',
-      last_maintenance: '2024-11-15',
-      next_maintenance: '2024-02-15'
-    },
-    {
-      id: 'EQ-002',
-      name: 'OBD-II Scanner',
-      type: 'DIAGNOSTIC',
-      status: 'IN_USE',
-      last_maintenance: '2024-10-20',
-      next_maintenance: '2025-01-20'
-    },
-    {
-      id: 'EQ-003',
-      name: 'Tire Changer',
-      type: 'MACHINERY',
-      status: 'MAINTENANCE',
-      last_maintenance: '2024-12-01',
-      next_maintenance: '2024-12-15'
+  // State for data from API
+  const [jobCards, setJobCards] = useState<any[]>([])
+  const [equipment, setEquipment] = useState<any[]>([])
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const [jobCardsData, equipmentData] = await Promise.all([
+          fetchJobCards(),
+          fetchEquipmentList()
+        ])
+        setJobCards(jobCardsData)
+        setEquipment(equipmentData)
+      } catch (error) {
+        console.error('Error loading garage management data:', error)
+        setError('Failed to load data. Please try again.')
+      } finally {
+        setLoading(false)
+      }
     }
-  ])
+    loadData()
+  }, [])
 
   const garageStats = [
     {
       title: 'Active Job Cards',
-      value: jobCards.filter(jc => ['PENDING', 'IN_PROGRESS'].includes(jc.status)).length.toString(),
+      value: (Array.isArray(jobCards) ? jobCards.filter(jc => ['PENDING', 'IN_PROGRESS', 'pending', 'in_progress'].includes(jc.status)).length : 0).toString(),
       icon: ClipboardList,
       trend: { value: '+3', isPositive: true },
       color: colors.adminPrimary,
     },
     {
       title: 'Completed Today',
-      value: jobCards.filter(jc => jc.status === 'COMPLETED' && jc.date_completed === '2024-12-08').length.toString(),
+      value: (Array.isArray(jobCards) ? jobCards.filter(jc => jc.status?.toLowerCase() === 'completed' && jc.date_completed === new Date().toISOString().split('T')[0]).length : 0).toString(),
       icon: CheckCircle,
       trend: { value: '+2', isPositive: true },
       color: colors.adminSuccess,
     },
     {
       title: 'Available Equipment',
-      value: equipment.filter(eq => eq.status === 'AVAILABLE').length.toString(),
+      value: (Array.isArray(equipment) ? equipment.filter(eq => eq.status === 'AVAILABLE').length : 0).toString(),
       icon: Wrench,
       trend: { value: '0', isPositive: true },
       color: colors.adminAccent,
@@ -197,23 +146,49 @@ export default function GarageManagementPage() {
     }
   }
 
-  const filteredJobCards = jobCards.filter(jobCard => {
-    const matchesSearch = searchTerm === '' || 
-      jobCard.vehicle_registration.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      jobCard.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      jobCard.issue_description.toLowerCase().includes(searchTerm.toLowerCase())
-    
+  const filteredJobCards = Array.isArray(jobCards) ? jobCards.filter(jobCard => {
+    const matchesSearch = searchTerm === '' ||
+      jobCard.vehicle_registration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobCard.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobCard.issue_description?.toLowerCase().includes(searchTerm.toLowerCase())
+
     const matchesStatus = statusFilter === 'ALL' || jobCard.status === statusFilter
-    
+
     return matchesSearch && matchesStatus
-  })
+  }) : []
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 mb-4" style={{ borderColor: colors.adminPrimary }}></div>
+        <p style={{ color: colors.textSecondary }}>Loading garage management data...</p>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-lg mb-4" style={{ color: colors.adminError }}>{error}</div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: colors.adminPrimary }}
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button
-          onClick={() => {/* Navigate to create job card */}}
+          onClick={() => {/* Navigate to create job card */ }}
           className="p-4 rounded-lg border-2 border-dashed hover:bg-gray-50 transition-colors"
           style={{ borderColor: colors.borderLight }}
         >
@@ -225,9 +200,9 @@ export default function GarageManagementPage() {
             </div>
           </div>
         </button>
-        
+
         <button
-          onClick={() => {/* Navigate to add equipment */}}
+          onClick={() => {/* Navigate to add equipment */ }}
           className="p-4 rounded-lg border-2 border-dashed hover:bg-gray-50 transition-colors"
           style={{ borderColor: colors.borderLight }}
         >
@@ -239,7 +214,7 @@ export default function GarageManagementPage() {
             </div>
           </div>
         </button>
-        
+
         <button
           onClick={() => setActiveTab('reports')}
           className="p-4 rounded-lg border-2 border-dashed hover:bg-gray-50 transition-colors"
@@ -279,7 +254,7 @@ export default function GarageManagementPage() {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <div className="font-medium" style={{ color: colors.textPrimary }}>
-                    {jobCard.id} - {jobCard.vehicle_registration}
+                    {jobCard.job_card_number || `JC-${String(jobCard.id).padStart(3, '0')}`} - {jobCard.vehicle_registration}
                   </div>
                   <div className="text-sm" style={{ color: colors.textSecondary }}>
                     {jobCard.vehicle_make_model} | {jobCard.customer_name}
@@ -339,7 +314,7 @@ export default function GarageManagementPage() {
             style={{ borderColor: colors.borderLight }}
           />
         </div>
-        
+
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -354,7 +329,7 @@ export default function GarageManagementPage() {
         </select>
 
         <button
-          onClick={() => {/* Create new job card */}}
+          onClick={() => window.location.href = '/admin/garage-management/job-card/add'}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
           style={{ backgroundColor: colors.adminPrimary }}
         >
@@ -408,7 +383,7 @@ export default function GarageManagementPage() {
                   <td className="py-3 px-4">
                     <div>
                       <div className="font-medium" style={{ color: colors.textPrimary }}>
-                        {jobCard.id}
+                        {jobCard.job_card_number || `JC-${String(jobCard.id).padStart(3, '0')}`}
                       </div>
                       <div className="text-xs" style={{ color: colors.textSecondary }}>
                         {jobCard.date_created}
@@ -472,7 +447,7 @@ export default function GarageManagementPage() {
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {/* View job card details */}}
+                        onClick={() => window.location.href = `/admin/garage-management/job-card/${jobCard.id}`}
                         className="p-1 rounded hover:bg-gray-200 transition-colors"
                         title="View Details"
                       >
@@ -495,7 +470,7 @@ export default function GarageManagementPage() {
       subtitle="Manage tools and machinery"
       action={
         <button
-          onClick={() => {/* Add equipment */}}
+          onClick={() => {/* Add equipment */ }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
           style={{ backgroundColor: colors.adminPrimary }}
         >
@@ -517,7 +492,7 @@ export default function GarageManagementPage() {
             <div className="flex justify-between items-start mb-3">
               <div>
                 <h3 className="font-medium" style={{ color: colors.textPrimary }}>{item.name}</h3>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>{item.type}</p>
+                <p className="text-sm" style={{ color: colors.textSecondary }}>{item.description || item.condition || 'N/A'}</p>
               </div>
               <span
                 className="px-2 py-1 rounded text-xs font-medium"
@@ -529,14 +504,14 @@ export default function GarageManagementPage() {
                 {item.status}
               </span>
             </div>
-            {item.last_maintenance && (
+            {item.serial_number && (
               <div className="text-xs" style={{ color: colors.textTertiary }}>
-                Last maintenance: {item.last_maintenance}
+                Serial: {item.serial_number}
               </div>
             )}
-            {item.next_maintenance && (
+            {item.purchase_date && (
               <div className="text-xs" style={{ color: colors.textTertiary }}>
-                Next maintenance: {item.next_maintenance}
+                Purchased: {item.purchase_date}
               </div>
             )}
           </motion.div>
@@ -557,13 +532,13 @@ export default function GarageManagementPage() {
             <div className="text-2xl font-bold" style={{ color: colors.adminPrimary }}>12</div>
             <div className="text-sm" style={{ color: colors.textSecondary }}>+20% from last week</div>
           </div>
-          
+
           <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminSuccess}05` }}>
             <h3 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Average Completion Time</h3>
             <div className="text-2xl font-bold" style={{ color: colors.adminSuccess }}>2.5 days</div>
             <div className="text-sm" style={{ color: colors.textSecondary }}>-0.3 days improvement</div>
           </div>
-          
+
           <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminAccent}05` }}>
             <h3 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Customer Satisfaction</h3>
             <div className="text-2xl font-bold" style={{ color: colors.adminAccent }}>4.6/5</div>
@@ -610,11 +585,10 @@ export default function GarageManagementPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'bg-white shadow-sm'
-                : 'hover:bg-gray-200'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${activeTab === tab.id
+              ? 'bg-white shadow-sm'
+              : 'hover:bg-gray-200'
+              }`}
             style={{
               color: activeTab === tab.id ? colors.adminPrimary : colors.textSecondary
             }}

@@ -3,21 +3,24 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Package, AlertTriangle, DollarSign } from 'lucide-react'
+import { Plus, Package, AlertTriangle, DollarSign, Edit, Trash2, MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
-import { fetchParts, Part, fetchPartsStockSummary } from '@/lib/api'
+import { fetchParts, Part, fetchPartsStockSummary, deletePart } from '@/lib/api'
 import { DataTable } from '@/components/ui/data-table'
 import { ColumnDef } from '@tanstack/react-table'
 import StatCard from '@/components/shared/stat-card'
 import DashboardCard from '@/components/shared/dashboard-card'
+import DeleteConfirmationModal from '@/components/shared/delete-confirmation-modal'
 import { colors } from '@/lib/theme/colors'
 import { motion } from 'framer-motion'
+import { useToast } from '@/components/ui/use-toast'
 
-const columns: ColumnDef<Part>[] = [
+// Need to define columns inside component to access delete function
+const createColumns = (onDelete: (part: Part) => void): ColumnDef<Part>[] => [
     {
-        accessorKey: 'part_number',
-        header: 'Part Number',
-        cell: ({ row }) => <span className="font-medium text-gray-900">{row.getValue('part_number')}</span>
+        accessorKey: 'sku',
+        header: 'SKU',
+        cell: ({ row }) => <span className="font-mono font-medium text-gray-900">{row.getValue('sku')}</span>
     },
     {
         accessorKey: 'name',
@@ -25,7 +28,7 @@ const columns: ColumnDef<Part>[] = [
         cell: ({ row }) => (
             <div>
                 <div className="font-medium text-gray-900">{row.getValue('name')}</div>
-                <div className="text-xs text-gray-500">{row.original.category_name}</div>
+                <div className="text-xs text-gray-500">{row.original.category_name || 'Uncategorized'}</div>
             </div>
         )
     },
@@ -41,7 +44,7 @@ const columns: ColumnDef<Part>[] = [
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${isLow ? 'bg-red-500' : 'bg-green-500'}`} />
                     <span className={`font-medium ${isLow ? 'text-red-700' : 'text-gray-700'}`}>
-                        {quantity} {row.original.unit}
+                        {quantity} {row.original.unit?.toLowerCase()}
                     </span>
                     {isLow && (
                         <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
@@ -60,14 +63,53 @@ const columns: ColumnDef<Part>[] = [
     {
         accessorKey: 'selling_price',
         header: 'Selling Price',
-        cell: ({ row }) => <span className="font-medium text-gray-900">KES {Number(row.getValue('selling_price')).toLocaleString()}</span>
+        cell: ({ row }) => {
+            const price = row.getValue('selling_price') as string;
+            return price ? 
+                <span className="font-medium text-gray-900">KES {Number(price).toLocaleString()}</span> :
+                <span className="text-gray-400">—</span>
+        }
     },
+    {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => {
+            const part = row.original;
+            return (
+                <div className="flex items-center gap-2">
+                    <Link href={`/supervisor/garage/parts/${part.id}/edit`}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                        >
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onDelete(part)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            )
+        }
+    }
 ]
 
 export default function GaragePartsPage() {
+    const { toast } = useToast()
     const [data, setData] = useState<Part[]>([])
     const [stats, setStats] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        part: null as Part | null,
+        isDeleting: false
+    })
 
     useEffect(() => {
         const loadData = async () => {
@@ -88,12 +130,63 @@ export default function GaragePartsPage() {
         loadData()
     }, [])
 
+    const handleDeleteClick = (part: Part) => {
+        setDeleteModal({
+            isOpen: true,
+            part,
+            isDeleting: false
+        })
+    }
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteModal.part) return
+
+        setDeleteModal(prev => ({ ...prev, isDeleting: true }))
+
+        try {
+            await deletePart(deleteModal.part.id)
+            
+            // Remove from local state
+            setData(prevData => prevData.filter(p => p.id !== deleteModal.part?.id))
+            
+            toast({
+                title: "Success",
+                description: "Part deleted successfully",
+            })
+            
+            setDeleteModal({
+                isOpen: false,
+                part: null,
+                isDeleting: false
+            })
+        } catch (error: any) {
+            console.error('Error deleting part:', error)
+            toast({
+                title: "Error",
+                description: error.response?.data?.detail || "Failed to delete part. Please try again.",
+                variant: "destructive"
+            })
+            
+            setDeleteModal(prev => ({ ...prev, isDeleting: false }))
+        }
+    }
+
+    const handleDeleteCancel = () => {
+        setDeleteModal({
+            isOpen: false,
+            part: null,
+            isDeleting: false
+        })
+    }
+
     // Fallback stats if API fails or returns null
     const derivedStats = stats || {
         total_items: data.length,
         low_stock_count: data.filter(p => p.current_stock <= (p.min_stock_level || 0)).length,
         total_value: data.reduce((acc, p) => acc + (Number(p.unit_cost) * p.current_stock), 0)
     }
+
+    const columns = createColumns(handleDeleteClick)
 
     return (
         <motion.div
@@ -110,19 +203,14 @@ export default function GaragePartsPage() {
                         Manage vehicle parts, stock levels, and pricing
                     </p>
                 </div>
-                {/* 
                 <Link href="/supervisor/garage/parts/add">
                     <Button 
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 text-white hover:opacity-90"
                         style={{ backgroundColor: colors.supervisorPrimary }}
                     >
                         <Plus size={16} /> Add Part
                     </Button>
                 </Link>
-                */}
-                <Button disabled variant="outline">
-                    <Plus className="mr-2 h-4 w-4" /> Add Part (Coming Soon)
-                </Button>
             </div>
 
             {/* Stats Overview */}
@@ -158,6 +246,22 @@ export default function GaragePartsPage() {
                     <DataTable columns={columns} data={data} searchKey="name" />
                 )}
             </DashboardCard>
+
+            {/* Delete Confirmation Modal */}
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={handleDeleteCancel}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Part"
+                message="Are you sure you want to delete this part? This action will remove all related data and cannot be undone."
+                itemDetails={deleteModal.part ? [
+                    { label: "SKU", value: deleteModal.part.sku },
+                    { label: "Name", value: deleteModal.part.name },
+                    { label: "Current Stock", value: `${deleteModal.part.current_stock} ${deleteModal.part.unit?.toLowerCase()}` },
+                    { label: "Unit Cost", value: `KES ${Number(deleteModal.part.unit_cost).toLocaleString()}` }
+                ] : []}
+                isDeleting={deleteModal.isDeleting}
+            />
         </motion.div>
     )
 }
