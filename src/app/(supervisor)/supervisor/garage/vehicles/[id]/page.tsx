@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { fetchVehicle, Vehicle, fetchJobCards, deleteVehicle } from '@/lib/api'
-import { 
-    ArrowLeft, 
-    Edit, 
-    Trash, 
-    Wrench, 
+import {
+    ArrowLeft,
+    Edit,
+    Trash,
+    Wrench,
     Car,
     Calendar,
     DollarSign,
@@ -38,12 +38,12 @@ interface JobCard {
     id: number
     registration_number: string
     client_name: string
-    client_phone: string
+    client_phone?: string
     make?: string
     model?: string
     defects?: string
     repairs?: string
-    job_cost?: string
+    job_cost?: number
     status: string
     date_created: string
     mechanic_status?: string
@@ -70,14 +70,14 @@ export default function GarageVehicleDetailsPage() {
                     fetchVehicle(Number(id)),
                     fetchJobCards()
                 ])
-                
+
                 setVehicle(vehicleResult)
-                
+
                 // Filter job cards for this vehicle
-                const vehicleJobCards = allJobCards.filter(job => 
+                const vehicleJobCards = allJobCards.filter(job =>
                     job.registration_number.toUpperCase() === vehicleResult.registration_number.toUpperCase()
                 ).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
-                
+
                 setJobCards(vehicleJobCards)
             } catch (error) {
                 console.error('Error loading vehicle data:', error)
@@ -170,10 +170,10 @@ export default function GarageVehicleDetailsPage() {
     // Calculate service statistics
     const serviceStats = {
         total_services: jobCards.length,
-        total_cost: jobCards.reduce((sum, job) => sum + (parseFloat(job.job_cost || '0') || 0), 0),
+        total_cost: jobCards.reduce((sum, job) => sum + (Number(job.job_cost || 0) || 0), 0),
         completed_services: jobCards.filter(job => job.status === 'completed').length,
         last_service: jobCards.length > 0 ? jobCards[0].date_created : null,
-        average_cost: jobCards.length > 0 ? jobCards.reduce((sum, job) => sum + (parseFloat(job.job_cost || '0') || 0), 0) / jobCards.length : 0
+        average_cost: jobCards.length > 0 ? jobCards.reduce((sum, job) => sum + (Number(job.job_cost || 0) || 0), 0) / jobCards.length : 0
     }
 
     return (
@@ -188,7 +188,7 @@ export default function GarageVehicleDetailsPage() {
                     <Button variant="ghost" size="icon" onClick={() => router.back()}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
-                    <div 
+                    <div
                         className="p-3 rounded-lg"
                         style={{ backgroundColor: `${colors.supervisorPrimary}15` }}
                     >
@@ -200,20 +200,18 @@ export default function GarageVehicleDetailsPage() {
                         </h1>
                         <div className="flex items-center gap-2 text-lg" style={{ color: colors.textSecondary }}>
                             <span>{vehicle.make} {vehicle.model}</span>
-                            {vehicle.year && <span>• {vehicle.year}</span>}
+                            {/* Year removed as not in interface */}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                vehicle.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${vehicle.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
                                 vehicle.status === 'IN_GARAGE' ? 'bg-blue-100 text-blue-800' :
-                                vehicle.status === 'MAINTENANCE' ? 'bg-orange-100 text-orange-800' :
-                                'bg-gray-100 text-gray-800'
-                            }`}>
+                                    vehicle.status === 'MAINTENANCE' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-gray-100 text-gray-800'
+                                }`}>
                                 {vehicle.status?.replace('_', ' ')}
                             </span>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                vehicle.classification === 'INTERNAL' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${vehicle.classification === 'INTERNAL' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                }`}>
                                 {vehicle.classification}
                             </span>
                         </div>
@@ -225,9 +223,9 @@ export default function GarageVehicleDetailsPage() {
                             <Edit className="h-4 w-4" /> Edit
                         </Button>
                     </Link>
-                    <Button 
-                        variant="destructive" 
-                        size="sm" 
+                    <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={handleDeleteClick}
                         className="flex items-center gap-2"
                     >
@@ -297,26 +295,24 @@ export default function GarageVehicleDetailsPage() {
                                         <div className="space-y-2 text-sm">
                                             <div>
                                                 <span className="font-medium">Current Status:</span>
-                                                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                                                    vehicle.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
+                                                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${vehicle.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
                                                     vehicle.status === 'IN_GARAGE' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-orange-100 text-orange-800'
-                                                }`}>
+                                                        'bg-orange-100 text-orange-800'
+                                                    }`}>
                                                     {vehicle.status?.replace('_', ' ')}
                                                 </span>
                                             </div>
                                             <div>
                                                 <span className="font-medium">Classification:</span>
-                                                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                                                    vehicle.classification === 'INTERNAL' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                                }`}>
+                                                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${vehicle.classification === 'INTERNAL' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                                    }`}>
                                                     {vehicle.classification}
                                                 </span>
                                             </div>
                                             <div>
                                                 <span className="font-medium">Last Service:</span>
-                                                {serviceStats.last_service ? 
-                                                    new Date(serviceStats.last_service).toLocaleDateString() : 
+                                                {serviceStats.last_service ?
+                                                    new Date(serviceStats.last_service).toLocaleDateString() :
                                                     'No services recorded'
                                                 }
                                             </div>
@@ -346,13 +342,12 @@ export default function GarageVehicleDetailsPage() {
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-sm font-medium">
-                                                    KES {parseFloat(job.job_cost || '0').toLocaleString()}
+                                                    KES {Number(job.job_cost || 0).toLocaleString()}
                                                 </div>
-                                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                                    job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                <span className={`text-xs px-2 py-1 rounded-full ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                     job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-yellow-100 text-yellow-800'
-                                                }`}>
+                                                        'bg-yellow-100 text-yellow-800'
+                                                    }`}>
                                                     {job.status}
                                                 </span>
                                             </div>
@@ -414,15 +409,14 @@ export default function GarageVehicleDetailsPage() {
                                                     <td className="p-2">{new Date(job.date_created).toLocaleDateString()}</td>
                                                     <td className="p-2">#{job.id}</td>
                                                     <td className="p-2">
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                             job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                            'bg-yellow-100 text-yellow-800'
-                                                        }`}>
+                                                                'bg-yellow-100 text-yellow-800'
+                                                            }`}>
                                                             {job.status}
                                                         </span>
                                                     </td>
-                                                    <td className="p-2">KES {parseFloat(job.job_cost || '0').toLocaleString()}</td>
+                                                    <td className="p-2">KES {Number(job.job_cost || 0).toLocaleString()}</td>
                                                     <td className="p-2">
                                                         <Link href={`/supervisor/garage/job-cards/${job.id}`}>
                                                             <Button size="sm" variant="outline">View</Button>
@@ -471,7 +465,7 @@ export default function GarageVehicleDetailsPage() {
                                     <div className="flex justify-between text-sm">
                                         <span>Completion rate:</span>
                                         <span className="font-medium">
-                                            {serviceStats.total_services > 0 
+                                            {serviceStats.total_services > 0
                                                 ? Math.round((serviceStats.completed_services / serviceStats.total_services) * 100)
                                                 : 0
                                             }%
@@ -494,7 +488,7 @@ export default function GarageVehicleDetailsPage() {
                                                 <span>{serviceStats.completed_services}/{serviceStats.total_services}</span>
                                             </div>
                                             <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div 
+                                                <div
                                                     className="h-2 rounded-full bg-gradient-to-r from-green-400 to-emerald-600"
                                                     style={{ width: `${(serviceStats.completed_services / serviceStats.total_services) * 100}%` }}
                                                 />
@@ -532,7 +526,7 @@ export default function GarageVehicleDetailsPage() {
                                 Vehicle document management system coming soon
                             </p>
                             <div className="text-sm text-gray-400">
-                                Features will include: Registration documents, Insurance papers, 
+                                Features will include: Registration documents, Insurance papers,
                                 Service certificates, and Inspection reports
                             </div>
                         </div>

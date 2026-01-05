@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { 
-    Card, 
-    CardContent, 
-    CardHeader, 
-    CardTitle 
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-    ArrowLeft, 
-    Calendar, 
-    DollarSign, 
-    Wrench, 
+import {
+    ArrowLeft,
+    Calendar,
+    DollarSign,
+    Wrench,
     AlertTriangle,
     TrendingUp,
     Clock,
@@ -36,12 +36,12 @@ interface JobCard {
     id: number
     registration_number: string
     client_name: string
-    client_phone: string
+    client_phone?: string
     make?: string
     model?: string
     defects?: string
     repairs?: string
-    job_cost?: string
+    job_cost?: number
     status: string
     date_created: string
     mechanic_status?: string
@@ -75,9 +75,9 @@ export default function VehicleHistoryPage() {
         const loadVehicleHistory = async () => {
             try {
                 const allJobCards = await fetchJobCards()
-                
+
                 // Filter job cards for this specific vehicle
-                const vehicleJobCards = allJobCards.filter(job => 
+                const vehicleJobCards = allJobCards.filter(job =>
                     job.registration_number.toUpperCase() === registration.toUpperCase()
                 ).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
 
@@ -88,10 +88,10 @@ export default function VehicleHistoryPage() {
 
                 // Get vehicle info from the latest job card
                 const latestJob = vehicleJobCards[0]
-                
+
                 // Calculate analytics
-                const totalCost = vehicleJobCards.reduce((sum, job) => 
-                    sum + (parseFloat(job.job_cost || '0') || 0), 0
+                const totalCost = vehicleJobCards.reduce((sum, job) =>
+                    sum + (Number(job.job_cost || 0) || 0), 0
                 )
 
                 // Status breakdown
@@ -151,7 +151,7 @@ export default function VehicleHistoryPage() {
 
         jobCards.forEach(job => {
             const jobMonth = job.date_created.slice(0, 7)
-            const cost = parseFloat(job.job_cost || '0') || 0
+            const cost = Number(job.job_cost || 0) || 0
             if (monthlyData.hasOwnProperty(jobMonth)) {
                 monthlyData[jobMonth] += cost
             }
@@ -165,12 +165,12 @@ export default function VehicleHistoryPage() {
 
     const analyzeCommonIssues = (jobCards: JobCard[]) => {
         const issues: { [key: string]: number } = {}
-        
+
         jobCards.forEach(job => {
             const defects = job.defects?.toLowerCase() || ''
             const repairs = job.repairs?.toLowerCase() || ''
             const combined = `${defects} ${repairs}`
-            
+
             // Simple keyword extraction
             const keywords = ['brake', 'engine', 'tire', 'oil', 'battery', 'lights', 'suspension', 'transmission']
             keywords.forEach(keyword => {
@@ -297,7 +297,7 @@ export default function VehicleHistoryPage() {
                                     transition={{ delay: index * 0.1 }}
                                     className="flex gap-4 border-l-2 border-gray-200 pl-4 pb-6"
                                 >
-                                    <div 
+                                    <div
                                         className="flex-shrink-0 w-3 h-3 rounded-full mt-2 -ml-6 border-2 border-white"
                                         style={{ backgroundColor: colors.supervisorPrimary }}
                                     />
@@ -311,18 +311,17 @@ export default function VehicleHistoryPage() {
                                                     <Calendar size={14} />
                                                     <span>{new Date(job.date_created).toLocaleDateString()}</span>
                                                     <span>•</span>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                        job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                         job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-yellow-100 text-yellow-800'
-                                                    }`}>
+                                                            'bg-yellow-100 text-yellow-800'
+                                                        }`}>
                                                         {job.status}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="font-semibold" style={{ color: colors.textPrimary }}>
-                                                    KES {parseFloat(job.job_cost || '0').toLocaleString()}
+                                                    KES {Number(job.job_cost || 0).toLocaleString()}
                                                 </div>
                                             </div>
                                         </div>
@@ -358,9 +357,9 @@ export default function VehicleHistoryPage() {
                                     <div key={index} className="flex items-center justify-between">
                                         <span className="text-sm font-medium">{item.month}</span>
                                         <div className="flex items-center gap-2">
-                                            <div 
+                                            <div
                                                 className="h-2 rounded-full bg-gradient-to-r from-green-400 to-emerald-600"
-                                                style={{ 
+                                                style={{
                                                     width: `${Math.max(5, (item.cost / Math.max(...vehicleData.monthly_costs.map(m => m.cost))) * 100)}%`,
                                                     minWidth: '20px'
                                                 }}
@@ -378,12 +377,12 @@ export default function VehicleHistoryPage() {
                                     <div key={status} className="flex items-center justify-between">
                                         <span className="text-sm font-medium capitalize">{status.replace('_', ' ')}</span>
                                         <div className="flex items-center gap-2">
-                                            <div 
+                                            <div
                                                 className="h-2 rounded-full"
-                                                style={{ 
+                                                style={{
                                                     width: `${(count / vehicleData.total_visits) * 100}%`,
                                                     backgroundColor: status === 'completed' ? colors.supervisorPrimary :
-                                                                   status === 'in_progress' ? '#3b82f6' : '#f59e0b',
+                                                        status === 'in_progress' ? '#3b82f6' : '#f59e0b',
                                                     minWidth: '20px'
                                                 }}
                                             />
@@ -440,15 +439,14 @@ export default function VehicleHistoryPage() {
                                             <td className="p-2">{new Date(job.date_created).toLocaleDateString()}</td>
                                             <td className="p-2">#{job.id}</td>
                                             <td className="p-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                     job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-yellow-100 text-yellow-800'
-                                                }`}>
+                                                        'bg-yellow-100 text-yellow-800'
+                                                    }`}>
                                                     {job.status}
                                                 </span>
                                             </td>
-                                            <td className="p-2">KES {parseFloat(job.job_cost || '0').toLocaleString()}</td>
+                                            <td className="p-2">KES {Number(job.job_cost || 0).toLocaleString()}</td>
                                             <td className="p-2">
                                                 <Link href={`/supervisor/garage/job-cards/${job.id}`}>
                                                     <Button size="sm" variant="outline">View</Button>
