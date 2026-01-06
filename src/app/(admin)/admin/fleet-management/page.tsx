@@ -336,7 +336,7 @@ export default function FleetManagementPage() {
                       style={{ borderColor: colors.borderLight }}
                     >
                       <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
-                        #{vehicle.id}
+                        {(currentPage - 1) * pageSize + index + 1}
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
                         {vehicle.make} {vehicle.model}
