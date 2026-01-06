@@ -158,18 +158,30 @@ export default function AddUserPage() {
 
     setLoading(true)
     try {
+      // Map frontend role to backend role
+      const mapRoleToBackend = (role: UserRole): string => {
+        switch (role) {
+          case 'Client': return 'CLIENT'
+          case 'Agent': return 'AGENT'
+          case 'Driver': return 'STAFF' // Map Driver to STAFF as per backend requirement
+          case 'Supervisor': return 'SUPERVISOR'
+          case 'Admin': return 'ADMIN'
+          default: return (role as string).toUpperCase()
+        }
+      }
+
       const userData = {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim(),
-        role: formData.role === 'Driver' ? 'STAFF' : formData.role.toUpperCase(),
+        role: mapRoleToBackend(formData.role),
         ...(formData.password && { password: formData.password }),
         ...(formData.idNumber && { idNumber: formData.idNumber.trim() }),
         ...(formData.physicalAddress && { physicalAddress: formData.physicalAddress.trim() }),
         ...(formData.branchId && { branchId: formData.branchId.trim() }),
       }
 
-      await createUser(userData)
+      await createUser(userData as any)
       setSuccess(`${formData.role.toLowerCase()} created successfully!`)
 
       // Reset form

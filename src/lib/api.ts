@@ -997,6 +997,7 @@ export interface VehicleExpenseItem {
 export interface Payment {
     id: number;
     contract: number | null;
+    contract_number?: string;
     client: { id: number; email: string; first_name?: string; last_name?: string };
     amount: string;
     method: 'MPESA' | 'CARD' | 'BANK';

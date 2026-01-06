@@ -84,13 +84,13 @@ export default function AdvancedFinancialAnalytics({ vehicleId }: AdvancedFinanc
         ])
 
         // Calculate Income Data
-        const successfulPayments = payments.filter(p => p.status === 'SUCCESS' || p.status === 'COMPLETED')
+        const successfulPayments = payments.filter(p => p.status === 'SUCCESS')
         const totalIncome = successfulPayments.reduce((sum, p) => sum + Number(p.amount), 0)
         const totalPending = contracts.filter(c => c.status === 'ACTIVE').reduce((sum, c) => sum + Number(c.balance_due || 0), 0) // Approximation
 
         // Group payments by month
         const paymentsByMonth = successfulPayments.reduce((acc, p) => {
-          const month = new Date(p.payment_date).toLocaleString('default', { month: 'short' })
+          const month = new Date(p.created_at).toLocaleString('default', { month: 'short' })
           acc[month] = (acc[month] || 0) + Number(p.amount)
           return acc
         }, {} as Record<string, number>)
@@ -122,7 +122,7 @@ export default function AdvancedFinancialAnalytics({ vehicleId }: AdvancedFinanc
           payments: payments.map(p => ({
             payment_id: p.id.toString(),
             amount: Number(p.amount),
-            payment_date: p.payment_date,
+            payment_date: p.created_at,
             method: p.method,
             status: p.status,
             contract_number: p.contract_number || 'N/A' // backend might verify this field
