@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useUIStore } from '@/stores/ui-store'
 import Sidebar from './sidebar/sidebar'
 import Header from './header/header'
 
@@ -9,13 +9,13 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const { isSidebarOpen, setSidebarOpen } = useUIStore()
   const sidebarWidth = isSidebarOpen ? 270 : 80
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Sidebar isOpen={isSidebarOpen} onToggle={() => setSidebarOpen(!isSidebarOpen)} />
 
       {/* Header */}
       <Header sidebarWidth={sidebarWidth} />

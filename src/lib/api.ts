@@ -18,14 +18,37 @@ import {
 } from '@/types/user-management';
 export type { Supplier, Vehicle, VehicleIncomeBreakdown, VehicleExpenseBreakdown };
 
-export const fetchVehicles = async (page = 1, pageSize = 10): Promise<{ vehicles: Vehicle[], totalCount: number, totalPages: number }> => {
+export interface VehicleFilters {
+    search?: string;
+    status?: string;
+    supplier?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export const fetchVehicles = async (
+    page = 1,
+    pageSize = 10,
+    filters?: VehicleFilters
+): Promise<{ vehicles: Vehicle[], totalCount: number, totalPages: number }> => {
     try {
-        const response = await api.get('/vehicles/', {
-            params: {
-                page,
-                page_size: pageSize
+        const params: any = {
+            page,
+            page_size: pageSize
+        };
+
+        if (filters) {
+            if (filters.search) params.search = filters.search;
+            if (filters.status && filters.status !== 'ALL') params.status = filters.status;
+            if (filters.supplier && filters.supplier !== 'ALL') params.supplier = filters.supplier;
+
+            if (filters.sortBy) {
+                const prefix = filters.sortOrder === 'desc' ? '-' : '';
+                params.ordering = `${prefix}${filters.sortBy}`;
             }
-        });
+        }
+
+        const response = await api.get('/vehicles/', { params });
 
         // Handle paginated response
         if (response.data.results) {

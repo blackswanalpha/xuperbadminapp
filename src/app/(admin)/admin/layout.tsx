@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useUIStore } from '@/stores/ui-store'
 import AdminSidebar from '@/components/layout/sidebar/admin-sidebar'
 import Header from '@/components/layout/header/header'
 import ProtectedRoute from '@/components/auth/protected-route'
@@ -10,14 +10,14 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const { isSidebarOpen, setSidebarOpen } = useUIStore()
   const sidebarWidth = isSidebarOpen ? 270 : 80
 
   return (
     <ProtectedRoute allowedRoles={['ADMIN']}>
       <div className="min-h-screen bg-gray-50">
         {/* Admin Sidebar */}
-        <AdminSidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <AdminSidebar isOpen={isSidebarOpen} onToggle={() => setSidebarOpen(!isSidebarOpen)} />
 
         {/* Header */}
         <Header sidebarWidth={sidebarWidth} userRole="admin" />

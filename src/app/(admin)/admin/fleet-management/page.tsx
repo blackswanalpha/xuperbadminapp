@@ -12,7 +12,6 @@ import { colors } from '@/lib/theme/colors'
 export default function FleetManagementPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [statistics, setStatistics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,23 +26,50 @@ export default function FleetManagementPage() {
 
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [supplierFilter, setSupplierFilter] = useState('ALL')
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch, statusFilter, supplierFilter, sortBy, sortOrder])
+
+  // Load data
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
+
+        // Prepare filters
+        const filters = {
+          search: debouncedSearch,
+          status: statusFilter,
+          supplier: supplierFilter,
+          sortBy,
+          sortOrder
+        }
+
         const [vehiclesResponse, statsData, suppliersData] = await Promise.all([
-          fetchVehicles(currentPage, pageSize),
-          fetchVehicleStatistics().catch(() => null), // Statistics might not be available
+          fetchVehicles(currentPage, 10, filters),
+          fetchVehicleStatistics().catch(() => null),
           fetchSuppliers()
         ])
+
         setVehicles(vehiclesResponse.vehicles)
         setSuppliers(suppliersData)
-        setFilteredVehicles(vehiclesResponse.vehicles)
+        // filteredVehicles is no longer needed, using vehicles directly
+        // setFilteredVehicles(vehiclesResponse.vehicles) 
         setTotalPages(vehiclesResponse.totalPages)
         setTotalCount(vehiclesResponse.totalCount)
         setStatistics(statsData)
@@ -56,56 +82,7 @@ export default function FleetManagementPage() {
     }
 
     loadData()
-  }, [currentPage])
-
-  // Filter and search effect
-  useEffect(() => {
-    if (!Array.isArray(vehicles)) return
-
-    let filtered = [...vehicles]
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(vehicle =>
-        vehicle.registration_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (vehicle.color && vehicle.color.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    }
-
-    // Apply status filter
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(vehicle => vehicle.status === statusFilter)
-    }
-
-    // Apply supplier filter
-    if (supplierFilter !== 'ALL') {
-      filtered = filtered.filter(vehicle => {
-        const supplierId = typeof vehicle.supplier === 'string' ? vehicle.supplier : vehicle.supplier?.id
-        const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'Unknown'
-        return supplierName === supplierFilter
-      })
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue = a[sortBy as keyof Vehicle]
-      let bValue = b[sortBy as keyof Vehicle]
-
-      // Handle different data types
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = aValue.toLowerCase()
-        bValue = bValue.toLowerCase()
-      }
-
-      if ((aValue ?? 0) < (bValue ?? 0)) return sortOrder === 'asc' ? -1 : 1
-      if ((aValue ?? 0) > (bValue ?? 0)) return sortOrder === 'asc' ? 1 : -1
-      return 0
-    })
-
-    setFilteredVehicles(filtered)
-  }, [vehicles, suppliers, searchTerm, statusFilter, supplierFilter, sortBy, sortOrder])
+  }, [currentPage, debouncedSearch, statusFilter, supplierFilter, sortBy, sortOrder])
 
   const handleDeleteVehicle = async () => {
     if (!selectedVehicle) return
@@ -114,7 +91,6 @@ export default function FleetManagementPage() {
       await deleteVehicle(selectedVehicle.id)
       const updatedVehicles = vehicles.filter(v => v.id !== selectedVehicle.id)
       setVehicles(updatedVehicles)
-      setFilteredVehicles(filteredVehicles.filter(v => v.id !== selectedVehicle.id))
       setDeleteModalOpen(false)
       setSelectedVehicle(null)
     } catch (error) {
@@ -326,7 +302,7 @@ export default function FleetManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(filteredVehicles) && filteredVehicles.map((vehicle, index) => (
+                  {Array.isArray(vehicles) && vehicles.map((vehicle, index) => (
                     <motion.tr
                       key={vehicle.id}
                       initial={{ opacity: 0, x: -20 }}
