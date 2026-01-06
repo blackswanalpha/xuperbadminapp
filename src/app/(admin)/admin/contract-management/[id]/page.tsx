@@ -43,7 +43,7 @@ export default function ContractDetailPage() {
           try {
             const userId = contractData.created_by || contractData.created_by_id
             const usersResponse = await fetchUsers()
-            const staff = usersResponse.find((user: any) => user.id === userId)
+            const staff = (usersResponse.results || []).find((user: any) => user.id === userId)
             if (staff) {
               setStaffName(staff.name || staff.email || 'Unknown Staff')
             }
@@ -195,11 +195,10 @@ export default function ContractDetailPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-3 px-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === tab.id
+                  className={`flex items-center gap-2 py-3 px-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
                       ? 'border-current'
                       : 'border-transparent hover:text-gray-700'
-                  }`}
+                    }`}
                   style={{
                     color: activeTab === tab.id ? colors.adminPrimary : colors.textSecondary,
                     borderColor: activeTab === tab.id ? colors.adminPrimary : 'transparent',

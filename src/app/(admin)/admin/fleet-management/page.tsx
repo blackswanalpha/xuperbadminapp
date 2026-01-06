@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchVehicles, Vehicle, deleteVehicle, fetchVehicleStatistics, fetchSuppliers, Supplier } from '@/lib/api'
 
 import { motion } from 'framer-motion'
-import { Car, Wrench, Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
+import { Car, Wrench, Plus, Search, Eye, Edit, Trash2, RefreshCw } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import StatCard from '@/components/shared/stat-card'
 import { colors } from '@/lib/theme/colors'
@@ -20,9 +20,13 @@ export default function FleetManagementPage() {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 10
+
+  // Track if suppliers have been loaded (they don't need pagination)
+  const suppliersLoadedRef = useRef(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   // Filter and search states
   const [searchTerm, setSearchTerm] = useState('')
@@ -45,44 +49,64 @@ export default function FleetManagementPage() {
     setCurrentPage(1)
   }, [debouncedSearch, statusFilter, supplierFilter, sortBy, sortOrder])
 
-  // Load data
+  // Load suppliers once (not paginated, used for filter dropdown)
   useEffect(() => {
-    const loadData = async () => {
+    const loadSuppliers = async () => {
+      if (suppliersLoadedRef.current) return
       try {
-        setLoading(true)
-
-        // Prepare filters
-        const filters = {
-          search: debouncedSearch,
-          status: statusFilter,
-          supplier: supplierFilter,
-          sortBy,
-          sortOrder
-        }
-
-        const [vehiclesResponse, statsData, suppliersData] = await Promise.all([
-          fetchVehicles(currentPage, 10, filters),
-          fetchVehicleStatistics().catch(() => null),
-          fetchSuppliers().catch(() => [])
-        ])
-
-        setVehicles(vehiclesResponse.vehicles)
-        setSuppliers(suppliersData)
-        // filteredVehicles is no longer needed, using vehicles directly
-        // setFilteredVehicles(vehiclesResponse.vehicles) 
-        setTotalPages(vehiclesResponse.totalPages)
-        setTotalCount(vehiclesResponse.totalCount)
-        setStatistics(statsData)
+        const suppliersResponse = await fetchSuppliers()
+        setSuppliers(suppliersResponse.results || [])
+        suppliersLoadedRef.current = true
       } catch (err) {
-        setError('Failed to load vehicles')
-        console.error(err)
-      } finally {
-        setLoading(false)
+        console.error('Failed to load suppliers for filter:', err)
+        // Non-critical, filter will work without supplier names
       }
     }
+    loadSuppliers()
+  }, [])
 
-    loadData()
+  // Load vehicles data (paginated)
+  const loadVehicles = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Prepare filters
+      const filters = {
+        search: debouncedSearch,
+        status: statusFilter,
+        supplier: supplierFilter,
+        sortBy,
+        sortOrder
+      }
+
+      const [vehiclesResponse, statsData] = await Promise.all([
+        fetchVehicles(currentPage, pageSize, filters),
+        fetchVehicleStatistics().catch(() => null),
+      ])
+
+      setVehicles(vehiclesResponse.vehicles || [])
+      // Ensure totalPages is at least 1 when there's data, 0 otherwise
+      const count = vehiclesResponse.totalCount || 0
+      const pages = count > 0 ? Math.max(1, Math.ceil(count / pageSize)) : 0
+      setTotalPages(pages)
+      setTotalCount(count)
+      setStatistics(statsData)
+    } catch (err) {
+      setError('Failed to load vehicles. Click retry to try again.')
+      console.error('Error loading vehicles:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [currentPage, debouncedSearch, statusFilter, supplierFilter, sortBy, sortOrder])
+
+  useEffect(() => {
+    loadVehicles()
+  }, [loadVehicles, retryCount])
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1)
+  }
 
   const handleDeleteVehicle = async () => {
     if (!selectedVehicle) return
@@ -275,7 +299,21 @@ export default function FleetManagementPage() {
             {loading ? (
               <div className="p-8 text-center text-gray-500">Loading vehicles...</div>
             ) : error ? (
-              <div className="p-8 text-center text-red-500">{error}</div>
+              <div className="p-8 text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                  onClick={handleRetry}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: colors.adminPrimary }}
+                >
+                  <RefreshCw size={16} />
+                  Retry
+                </button>
+              </div>
+            ) : vehicles.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                No vehicles found matching your criteria.
+              </div>
             ) : (
               <table className="w-full">
                 <thead>
@@ -408,9 +446,21 @@ export default function FleetManagementPage() {
 
                 {/* Page Numbers */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                  // Calculate visible page range
+                  let startPage = 1;
+                  if (totalPages > 5) {
+                    if (currentPage <= 3) {
+                      startPage = 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      startPage = totalPages - 4;
+                    } else {
+                      startPage = currentPage - 2;
+                    }
+                  }
                   const pageNum = startPage + i;
-                  if (pageNum > totalPages) return null;
+
+                  // Don't render pages beyond totalPages
+                  if (pageNum > totalPages || pageNum < 1) return null;
 
                   return (
                     <button

@@ -44,7 +44,7 @@ export default function AddPartPage() {
                     fetchSuppliers()
                 ])
                 setCategories(categoriesResult.results || [])
-                setSuppliers(suppliersResult)
+                setSuppliers(suppliersResult.results || [])
             } catch (error) {
                 console.error('Error loading initial data:', error)
                 toast({
@@ -121,7 +121,7 @@ export default function AddPartPage() {
                     </Button>
                 </Link>
                 <div className="flex items-center gap-3">
-                    <div 
+                    <div
                         className="p-2 rounded-lg"
                         style={{ backgroundColor: `${colors.supervisorPrimary}20` }}
                     >
@@ -147,24 +147,24 @@ export default function AddPartPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="sku">SKU / Part Number</Label>
-                                <Input 
-                                    id="sku" 
-                                    name="sku" 
-                                    value={formData.sku} 
-                                    onChange={handleChange} 
+                                <Input
+                                    id="sku"
+                                    name="sku"
+                                    value={formData.sku}
+                                    onChange={handleChange}
                                     placeholder="e.g., BRK001, OIL-5W30-001"
-                                    required 
+                                    required
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="name">Part Name</Label>
-                                <Input 
-                                    id="name" 
-                                    name="name" 
-                                    value={formData.name} 
-                                    onChange={handleChange} 
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleChange}
                                     placeholder="e.g., Brake Pad Set, Engine Oil"
-                                    required 
+                                    required
                                 />
                             </div>
                             <div className="space-y-2">
@@ -219,38 +219,38 @@ export default function AddPartPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="current_stock">Current Stock</Label>
-                                <Input 
-                                    id="current_stock" 
-                                    name="current_stock" 
-                                    type="number" 
+                                <Input
+                                    id="current_stock"
+                                    name="current_stock"
+                                    type="number"
                                     min="0"
-                                    value={formData.current_stock} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={formData.current_stock}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="min_stock_level">Minimum Stock Level</Label>
-                                <Input 
-                                    id="min_stock_level" 
-                                    name="min_stock_level" 
-                                    type="number" 
+                                <Input
+                                    id="min_stock_level"
+                                    name="min_stock_level"
+                                    type="number"
                                     min="0"
-                                    value={formData.min_stock_level} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={formData.min_stock_level}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="max_stock_level">Maximum Stock Level</Label>
-                                <Input 
-                                    id="max_stock_level" 
-                                    name="max_stock_level" 
-                                    type="number" 
+                                <Input
+                                    id="max_stock_level"
+                                    name="max_stock_level"
+                                    type="number"
                                     min="0"
-                                    value={formData.max_stock_level} 
-                                    onChange={handleChange} 
-                                    required 
+                                    value={formData.max_stock_level}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </div>
                         </div>
@@ -258,28 +258,28 @@ export default function AddPartPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="unit_cost">Unit Cost (KES)</Label>
-                                <Input 
-                                    id="unit_cost" 
-                                    name="unit_cost" 
-                                    type="number" 
+                                <Input
+                                    id="unit_cost"
+                                    name="unit_cost"
+                                    type="number"
                                     step="0.01"
                                     min="0"
-                                    value={formData.unit_cost} 
-                                    onChange={handleChange} 
+                                    value={formData.unit_cost}
+                                    onChange={handleChange}
                                     placeholder="0.00"
-                                    required 
+                                    required
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="selling_price">Selling Price (KES)</Label>
-                                <Input 
-                                    id="selling_price" 
-                                    name="selling_price" 
-                                    type="number" 
+                                <Input
+                                    id="selling_price"
+                                    name="selling_price"
+                                    type="number"
                                     step="0.01"
                                     min="0"
-                                    value={formData.selling_price} 
-                                    onChange={handleChange} 
+                                    value={formData.selling_price}
+                                    onChange={handleChange}
                                     placeholder="0.00 (Optional)"
                                 />
                             </div>
@@ -305,27 +305,27 @@ export default function AddPartPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="location">Storage Location</Label>
-                                <Input 
-                                    id="location" 
-                                    name="location" 
-                                    value={formData.location} 
-                                    onChange={handleChange} 
+                                <Input
+                                    id="location"
+                                    name="location"
+                                    value={formData.location}
+                                    onChange={handleChange}
                                     placeholder="e.g., Warehouse A, Shelf B3"
                                 />
                             </div>
                         </div>
 
                         <div className="flex justify-end space-x-2 pt-4">
-                            <Button 
-                                type="button" 
-                                variant="outline" 
+                            <Button
+                                type="button"
+                                variant="outline"
                                 onClick={() => router.back()}
                                 disabled={loading}
                             >
                                 Cancel
                             </Button>
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={loading}
                                 style={{ backgroundColor: colors.supervisorPrimary }}
                                 className="text-white hover:opacity-90"

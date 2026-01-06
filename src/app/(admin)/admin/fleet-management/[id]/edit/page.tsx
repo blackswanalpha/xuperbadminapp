@@ -30,7 +30,7 @@ export default function VehicleEditPage() {
         ])
         setVehicle(vehicleData)
         setFormData(vehicleData)
-        setSuppliers(suppliersData)
+        setSuppliers(suppliersData.results || [])
       } catch (error) {
         console.error('Error fetching data:', error)
         setError('Failed to load data')

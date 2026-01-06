@@ -34,8 +34,8 @@ export default function VehicleCreatePage() {
   useEffect(() => {
     const loadSuppliers = async () => {
       try {
-        const data = await fetchSuppliers()
-        setSuppliers(data)
+        const response = await fetchSuppliers()
+        setSuppliers(response.results || [])
       } catch (error) {
         console.error('Error loading suppliers:', error)
         setError('Failed to load suppliers')

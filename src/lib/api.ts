@@ -111,14 +111,72 @@ export const deleteVehicle = async (id: number | string): Promise<void> => {
     }
 };
 
-export const fetchSuppliers = async (): Promise<Supplier[]> => {
+export const fetchSuppliers = async (page = 1, pageSize = 20, search?: string): Promise<ApiResponse<Supplier>> => {
     try {
-        const response = await api.get('/suppliers/', {
-            params: { is_active: true }
-        });
-        return response.data.results || response.data;
+        const params: any = {
+            is_active: true,
+            page,
+            page_size: pageSize
+        };
+        if (search) params.search = search;
+
+        const response = await api.get('/suppliers/', { params });
+        return response.data;
     } catch (error) {
         console.error('Error fetching suppliers:', error);
+        throw error;
+    }
+};
+
+// Paginated version of fetchSuppliers for fleet management
+export interface SupplierFilters {
+    search?: string;
+    is_active?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export const fetchSuppliersPaginated = async (
+    page = 1,
+    pageSize = 10,
+    filters?: SupplierFilters
+): Promise<{ suppliers: Supplier[], totalCount: number, totalPages: number }> => {
+    try {
+        const params: Record<string, unknown> = {
+            page,
+            page_size: pageSize,
+            is_active: true,
+        };
+
+        if (filters) {
+            if (filters.search) params.search = filters.search;
+            if (filters.is_active !== undefined) params.is_active = filters.is_active;
+            if (filters.sortBy) {
+                const prefix = filters.sortOrder === 'desc' ? '-' : '';
+                params.ordering = `${prefix}${filters.sortBy}`;
+            }
+        }
+
+        const response = await api.get('/suppliers/', { params });
+
+        // Handle paginated response
+        if (response.data.results) {
+            return {
+                suppliers: response.data.results,
+                totalCount: response.data.count || 0,
+                totalPages: Math.ceil((response.data.count || 0) / pageSize)
+            };
+        }
+
+        // Handle non-paginated response (fallback)
+        const suppliers = Array.isArray(response.data) ? response.data : [];
+        return {
+            suppliers,
+            totalCount: suppliers.length,
+            totalPages: Math.ceil(suppliers.length / pageSize)
+        };
+    } catch (error) {
+        console.error('Error fetching suppliers (paginated):', error);
         throw error;
     }
 };
@@ -385,17 +443,20 @@ import {
 export * from '@/types/inventory-api';
 
 // Inventory Items API
-export const fetchInventoryItems = async (filters?: InventoryFilters, page = 1, pageSize = 1000): Promise<ApiResponse<InventoryItem>> => {
+export const fetchInventoryItems = async (filters?: InventoryFilters, page = 1, pageSize = 20): Promise<ApiResponse<InventoryItem>> => {
     try {
-        const params = new URLSearchParams();
-        params.append('page', page.toString());
-        params.append('page_size', pageSize.toString());
+        const params: any = {
+            page,
+            page_size: pageSize
+        };
 
-        if (filters?.condition) params.append('condition', filters.condition);
-        if (filters?.search) params.append('search', filters.search);
-        if (filters?.ordering) params.append('ordering', filters.ordering);
+        if (filters) {
+            if (filters.condition) params.condition = filters.condition;
+            if (filters.search) params.search = filters.search;
+            if (filters.ordering) params.ordering = filters.ordering;
+        }
 
-        const response = await api.get(`/inventory/vehicles/?${params.toString()}`);
+        const response = await api.get('/inventory/vehicles/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory items:', error);
@@ -601,19 +662,27 @@ export const fetchInventoryLocations = async (): Promise<{ locations: string[]; 
 };
 
 // Parts API
-export const fetchParts = async (filters?: PartsFilters, page = 1, pageSize = 1000): Promise<ApiResponse<Part>> => {
+export const fetchParts = async (
+    filters?: PartsFilters & { low_stock?: boolean },
+    page = 1,
+    pageSize = 20
+): Promise<ApiResponse<Part>> => {
     try {
-        const params = new URLSearchParams();
-        params.append('page', page.toString());
-        params.append('page_size', pageSize.toString());
+        const params: any = {
+            page,
+            page_size: pageSize
+        };
 
-        if (filters?.category) params.append('category', filters.category.toString());
-        if (filters?.supplier) params.append('supplier', filters.supplier.toString());
-        if (filters?.unit) params.append('unit', filters.unit);
-        if (filters?.search) params.append('search', filters.search);
-        if (filters?.ordering) params.append('ordering', filters.ordering);
+        if (filters) {
+            if (filters.category) params.category = filters.category;
+            if (filters.supplier) params.supplier = filters.supplier;
+            if (filters.unit) params.unit = filters.unit;
+            if (filters.search) params.search = filters.search;
+            if (filters.ordering) params.ordering = filters.ordering;
+            if (filters.low_stock !== undefined) params.low_stock = filters.low_stock;
+        }
 
-        const response = await api.get(`/inventory/parts/?${params.toString()}`);
+        const response = await api.get('/inventory/parts/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching parts:', error);
@@ -1456,10 +1525,29 @@ export interface JobCard {
     // Add other relevant fields as needed
 }
 
-export const fetchJobCards = async (): Promise<JobCard[]> => {
+export const fetchJobCards = async (
+    page = 1,
+    pageSize = 20,
+    filters?: {
+        registration_number?: string,
+        status?: string,
+        search?: string
+    }
+): Promise<ApiResponse<JobCard>> => {
     try {
-        const response = await api.get('/job-cards/'); // Note: URL might need adjustment based on backend router
-        return response.data.results || response.data;
+        const params: any = {
+            page,
+            page_size: pageSize
+        };
+
+        if (filters) {
+            if (filters.registration_number) params.registration_number = filters.registration_number;
+            if (filters.status) params.status = filters.status;
+            if (filters.search) params.search = filters.search;
+        }
+
+        const response = await api.get('/job-cards/', { params });
+        return response.data;
     } catch (error) {
         console.error('Error fetching job cards:', error);
         throw error;
@@ -1776,10 +1864,16 @@ export const searchVehicles = async (query: string = '', statusFilter?: string):
 // ================================
 
 // Users API
-export const fetchUsers = async (): Promise<User[]> => {
+export const fetchUsers = async (page = 1, pageSize = 20, search?: string): Promise<ApiResponse<User>> => {
     try {
-        const response = await api.get('/users/');
-        return response.data.results || response.data;
+        const params: any = {
+            page,
+            page_size: pageSize
+        };
+        if (search) params.search = search;
+
+        const response = await api.get('/users/', { params });
+        return response.data;
     } catch (error) {
         console.error('Error fetching users:', error);
         throw error;
@@ -1826,14 +1920,19 @@ export const deleteUser = async (id: string): Promise<void> => {
 };
 
 // Client Users API
-export const fetchClientUsers = async (): Promise<ClientUser[]> => {
+export const fetchClientUsers = async (page = 1, pageSize = 20): Promise<ApiResponse<ClientUser>> => {
     try {
         // Use loyalty/clients endpoint which filters users with CLIENT role
-        const response = await api.get('/loyalty/clients/');
-        const clients = response.data.results || response.data;
+        const params = {
+            page,
+            page_size: pageSize
+        };
+        const response = await api.get('/loyalty/clients/', { params });
+        const results = response.data.results || response.data;
+        const count = response.data.count || (Array.isArray(results) ? results.length : 0);
 
         // Transform data to match ClientUser interface
-        return clients.map((client: any) => ({
+        const transformedResults = (Array.isArray(results) ? results : []).map((client: any) => ({
             id: client.id,
             name: client.name,
             email: client.email,
@@ -1854,6 +1953,13 @@ export const fetchClientUsers = async (): Promise<ClientUser[]> => {
             loyaltyPoints: client.current_points || 0,
             loyaltyTier: client.loyalty_tier || 'Bronze',
         }));
+
+        return {
+            results: transformedResults,
+            count: count,
+            next: response.data.next || null,
+            previous: response.data.previous || null
+        };
     } catch (error) {
         console.error('Error fetching client users:', error);
         throw error;
@@ -2123,6 +2229,7 @@ export const fetchLoyaltyRewards = async (): Promise<any[]> => {
         throw error;
     }
 };
+
 
 export const checkRewardRedemption = async (rewardId: string, clientId: string): Promise<{
     can_redeem: boolean;

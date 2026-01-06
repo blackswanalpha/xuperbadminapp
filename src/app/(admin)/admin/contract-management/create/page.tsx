@@ -39,9 +39,9 @@ export default function CreateContractPage() {
           fetchVehicles(1, 1000),
           fetchUsers()
         ])
-        
+
         setVehicles(vehiclesData.vehicles)
-        setClients(clientsData.filter(user => user.role === 'Client'))
+        setClients((clientsData.results || []).filter(user => user.role === 'Client'))
 
         // Generate default contract number
         const now = new Date()
@@ -66,13 +66,13 @@ export default function CreateContractPage() {
       ...prev,
       [field]: value
     }))
-    
+
     // Auto-calculate balance due when total value or amount paid changes
     if (field === 'total_contract_value' || field === 'amount_paid') {
       const totalValue = field === 'total_contract_value' ? parseFloat(value) || 0 : parseFloat(formData.total_contract_value) || 0
       const amountPaid = field === 'amount_paid' ? parseFloat(value) || 0 : parseFloat(formData.amount_paid) || 0
       const balanceDue = Math.max(0, totalValue - amountPaid)
-      
+
       setFormData(prev => ({
         ...prev,
         balance_due: balanceDue.toString()
@@ -377,7 +377,7 @@ export default function CreateContractPage() {
                   <option value="">Select a client</option>
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
-                      {client.first_name || client.last_name 
+                      {client.first_name || client.last_name
                         ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
                         : client.email
                       }

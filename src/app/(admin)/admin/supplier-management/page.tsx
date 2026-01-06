@@ -68,7 +68,8 @@ export default function SupplierManagementPage() {
   const loadSuppliers = async () => {
     try {
       setLoading(true)
-      const data = await fetchSuppliers()
+      const response = await fetchSuppliers()
+      const data = response.results || []
       setSuppliers(data)
       setFilteredSuppliers(data)
 

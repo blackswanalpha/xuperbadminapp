@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -14,7 +14,8 @@ import {
   Star,
   Package,
   TrendingUp,
-  Calendar
+  Calendar,
+  RefreshCw
 } from 'lucide-react'
 import { colors } from '@/lib/theme/colors'
 import DashboardCard from '@/components/shared/dashboard-card'
@@ -49,12 +50,9 @@ export default function SuppliersList({ onAdd, onEdit, onView, refreshTrigger }:
   const [pageSize] = useState(6) // 6 per page for grid layout
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
 
-  useEffect(() => {
-    loadSuppliersData()
-  }, [refreshTrigger, currentPage])
-
-  const loadSuppliersData = async () => {
+  const loadSuppliersData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -67,16 +65,28 @@ export default function SuppliersList({ onAdd, onEdit, onView, refreshTrigger }:
       setSuppliers(suppliersResponse.results || [])
       setStats(statsResponse)
 
-      if (suppliersResponse.count) {
-        setTotalCount(suppliersResponse.count)
-        setTotalPages(Math.ceil(suppliersResponse.count / pageSize))
-      }
+      const count = suppliersResponse.count || 0
+      setTotalCount(count)
+      setTotalPages(count > 0 ? Math.max(1, Math.ceil(count / pageSize)) : 0)
     } catch (err) {
       console.error('Error loading suppliers data:', err)
-      setError('Failed to load suppliers data')
+      setError('Failed to load suppliers data. Click retry to try again.')
     } finally {
       setLoading(false)
     }
+  }, [currentPage, pageSize])
+
+  useEffect(() => {
+    loadSuppliersData()
+  }, [loadSuppliersData, refreshTrigger, retryCount])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterStatus])
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1)
   }
 
   const handleDelete = async (id: string, name: string) => {
@@ -146,9 +156,10 @@ export default function SuppliersList({ onAdd, onEdit, onView, refreshTrigger }:
       <div className="text-center py-8">
         <p className="text-red-600 mb-4">{error}</p>
         <button
-          onClick={loadSuppliersData}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          onClick={handleRetry}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
+          <RefreshCw size={16} />
           Retry
         </button>
       </div>
@@ -322,8 +333,8 @@ export default function SuppliersList({ onAdd, onEdit, onView, refreshTrigger }:
                           </h3>
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${supplier.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                                supplier.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
-                                  'bg-yellow-100 text-yellow-800'
+                              supplier.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
+                                'bg-yellow-100 text-yellow-800'
                               }`}
                           >
                             {supplier.status}

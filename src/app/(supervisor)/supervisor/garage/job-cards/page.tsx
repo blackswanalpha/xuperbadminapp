@@ -56,14 +56,15 @@ export default function JobCardsPage() {
         const loadData = async () => {
             try {
                 const result = await fetchJobCards()
-                setData(result)
+                const jobCards = result.results || []
+                setData(jobCards)
 
                 // Calculate stats
                 setStats({
-                    total: result.length,
-                    inProgress: result.filter(j => j.status === 'in_progress' || j.status === 'started').length,
-                    completed: result.filter(j => j.status === 'completed').length,
-                    unpaid: result.filter(j => j.payment_status === 'pending' || j.payment_status === 'unpaid').length
+                    total: jobCards.length,
+                    inProgress: jobCards.filter(j => j.status === 'in_progress' || j.status === 'started').length,
+                    completed: jobCards.filter(j => j.status === 'completed').length,
+                    unpaid: jobCards.filter(j => j.payment_status === 'pending' || j.payment_status === 'unpaid').length
                 })
             } catch (error) {
                 console.error('Error loading job cards:', error)
@@ -225,8 +226,8 @@ export default function JobCardsPage() {
                                     key={status}
                                     onClick={() => setFilterStatus(status)}
                                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${filterStatus === status
-                                            ? 'bg-white text-blue-600 shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-700'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                 >
                                     {status === 'all' ? 'All Jobs' : status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
@@ -289,9 +290,9 @@ export default function JobCardsPage() {
                                             </td>
                                             <td className="py-4 text-sm">
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${job.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                        job.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                            job.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                                                                'bg-gray-50 text-gray-700 border-gray-200'
+                                                    job.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                        job.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                                            'bg-gray-50 text-gray-700 border-gray-200'
                                                     }`}>
                                                     {job.status === 'completed' && <CheckCircle2 size={12} />}
                                                     {job.status === 'in_progress' && <Wrench size={12} />}
@@ -301,8 +302,8 @@ export default function JobCardsPage() {
                                             </td>
                                             <td className="py-4 text-sm">
                                                 <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${job.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                                                        job.payment_status === 'partial' ? 'bg-orange-100 text-orange-800' :
-                                                            'bg-red-100 text-red-800'
+                                                    job.payment_status === 'partial' ? 'bg-orange-100 text-orange-800' :
+                                                        'bg-red-100 text-red-800'
                                                     }`}>
                                                     {job.payment_status.toUpperCase()}
                                                 </span>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Filter, Plus, Edit, Eye, MoreHorizontal } from 'lucide-react'
+import { Search, Filter, Plus, Edit, Eye, MoreHorizontal, RefreshCw } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
 import {
@@ -37,12 +37,9 @@ export default function VehiclesTab() {
   const [pageSize] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
 
-  useEffect(() => {
-    loadVehicles()
-  }, [searchTerm, conditionFilter, currentPage])
-
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -50,24 +47,36 @@ export default function VehiclesTab() {
       const filters: InventoryFilters = {
         ...(searchTerm && { search: searchTerm }),
         ...(conditionFilter && { condition: conditionFilter }),
-        ordering: '-created_at', // Fixed invalid sort key
+        ordering: '-created_at',
       }
 
-      // Pass page and pageSize to API
       const response: ApiResponse<InventoryItem> = await fetchInventoryItems(filters, currentPage, pageSize)
 
-      setVehicles(response.results)
-      if (response.count) {
-        setTotalCount(response.count)
-        setTotalPages(Math.ceil(response.count / pageSize))
-      }
+      setVehicles(response.results || [])
+      const count = response.count || 0
+      setTotalCount(count)
+      // Ensure at least 1 page if there's data, 0 if empty
+      setTotalPages(count > 0 ? Math.max(1, Math.ceil(count / pageSize)) : 0)
     } catch (err) {
       console.error('Error loading vehicles:', err)
-      setError('Failed to load vehicle inventory')
+      setError('Failed to load vehicle inventory. Click retry to try again.')
       setVehicles([])
     } finally {
       setLoading(false)
     }
+  }, [searchTerm, conditionFilter, currentPage, pageSize])
+
+  useEffect(() => {
+    loadVehicles()
+  }, [loadVehicles, retryCount])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, conditionFilter])
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1)
   }
 
   const handleViewDetails = (vehicleId: number) => {
@@ -212,9 +221,10 @@ export default function VehiclesTab() {
           <div className="text-center py-8">
             <p className="text-red-600 mb-4">{error}</p>
             <button
-              onClick={loadVehicles}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              onClick={handleRetry}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
+              <RefreshCw size={16} />
               Retry
             </button>
           </div>
@@ -384,8 +394,8 @@ export default function VehiclesTab() {
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
-                              ? 'bg-blue-600 text-white'
-                              : 'hover:bg-gray-100'
+                            ? 'bg-blue-600 text-white'
+                            : 'hover:bg-gray-100'
                             }`}
                           style={currentPage !== pageNum ? { color: colors.textPrimary } : {}}
                         >

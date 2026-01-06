@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -12,7 +12,8 @@ import {
   Package,
   TrendingDown,
   TrendingUp,
-  MoreHorizontal
+  MoreHorizontal,
+  RefreshCw
 } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
@@ -54,53 +55,15 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
   const [pageSize] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
 
-  useEffect(() => {
-    loadData()
-  }, [refreshTrigger, currentPage])
-
-  useEffect(() => {
-    setCurrentPage(1)
-    filterParts()
-  }, [searchTerm, categoryFilter, supplierFilter, unitFilter, showLowStockOnly])
-
-  const loadData = async () => {
+  // Load data with proper pagination
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const [partsResponse, categoriesResponse, suppliersResponse] = await Promise.all([
-        fetchParts({ ordering: '-created_at' }, currentPage, pageSize),
-        fetchPartCategories(),
-        fetchInventorySuppliers(),
-      ])
-
-      setParts(partsResponse.results)
-      setCategories(categoriesResponse.results)
-      setSuppliers(suppliersResponse.results)
-
-      if (partsResponse.count) {
-        setTotalCount(partsResponse.count)
-        setTotalPages(Math.ceil(partsResponse.count / pageSize))
-      }
-    } catch (err) {
-      console.error('Error loading parts data:', err)
-      setError('Failed to load parts data')
-      setParts([])
-      setCategories([])
-      setSuppliers([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const filterParts = async () => {
-    if (!searchTerm && !categoryFilter && !supplierFilter && !unitFilter && !showLowStockOnly) {
-      return loadData()
-    }
-
-    try {
-      setLoading(true)
+      // Build filters including all server-side filters
       const filters: PartsFilters = {
         ...(searchTerm && { search: searchTerm }),
         ...(categoryFilter && { category: parseInt(categoryFilter) }),
@@ -109,24 +72,43 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
         ordering: '-created_at',
       }
 
-      const response = await fetchParts(filters, currentPage, pageSize)
-      let filteredParts = response.results
+      const [partsResponse, categoriesResponse, suppliersResponse] = await Promise.all([
+        fetchParts({
+          ...filters,
+          low_stock: showLowStockOnly || undefined
+        }, currentPage, pageSize),
+        fetchPartCategories(),
+        fetchInventorySuppliers(),
+      ])
 
-      if (showLowStockOnly) {
-        filteredParts = filteredParts.filter(part => part.is_low_stock)
-      }
+      setParts(partsResponse.results || [])
+      setCategories(categoriesResponse.results || [])
+      setSuppliers(suppliersResponse.results || [])
 
-      setParts(filteredParts)
-      if (response.count) {
-        setTotalCount(response.count)
-        setTotalPages(Math.ceil(response.count / pageSize))
-      }
+      setTotalCount(partsResponse.count || 0)
+      setTotalPages(partsResponse.count > 0 ? Math.max(1, Math.ceil(partsResponse.count / pageSize)) : 0)
     } catch (err) {
-      console.error('Error filtering parts:', err)
-      setError('Failed to filter parts')
+      console.error('Error loading parts data:', err)
+      setError('Failed to load parts data. Click retry to try again.')
+      setParts([])
+      setCategories([])
+      setSuppliers([])
     } finally {
       setLoading(false)
     }
+  }, [searchTerm, categoryFilter, supplierFilter, unitFilter, showLowStockOnly, currentPage, pageSize])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData, refreshTrigger, retryCount])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, categoryFilter, supplierFilter, unitFilter, showLowStockOnly])
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1)
   }
 
   const handleDeletePart = async (part: Part) => {
@@ -314,9 +296,10 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
           <div className="text-center py-8">
             <p className="text-red-600 mb-4">{error}</p>
             <button
-              onClick={loadData}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              onClick={handleRetry}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
+              <RefreshCw size={16} />
               Retry
             </button>
           </div>
@@ -492,8 +475,8 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
-                              ? 'bg-blue-600 text-white'
-                              : 'hover:bg-gray-100'
+                            ? 'bg-blue-600 text-white'
+                            : 'hover:bg-gray-100'
                             }`}
                           style={currentPage !== pageNum ? { color: colors.textPrimary } : {}}
                         >

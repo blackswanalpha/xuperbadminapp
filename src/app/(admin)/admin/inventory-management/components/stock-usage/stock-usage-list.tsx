@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -11,7 +11,8 @@ import {
   User,
   TrendingDown,
   TrendingUp,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react'
 import { colors } from '@/lib/theme/colors'
 import DashboardCard from '@/components/shared/dashboard-card'
@@ -44,32 +45,43 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
   const [pageSize] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
 
-  useEffect(() => {
-    loadStockUsageData()
-  }, [refreshTrigger, currentPage])
-
-  const loadStockUsageData = async () => {
+  const loadStockUsageData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const usageResponse = await fetchStockUsage({}, currentPage, pageSize)
-      const statsResponse = await fetchStockUsageStats()
+      const [usageResponse, statsResponse] = await Promise.all([
+        fetchStockUsage({}, currentPage, pageSize),
+        fetchStockUsageStats()
+      ])
 
-      setStockUsage(usageResponse.results)
+      setStockUsage(usageResponse.results || [])
       setStats(statsResponse)
 
-      if (usageResponse.count) {
-        setTotalCount(usageResponse.count)
-        setTotalPages(Math.ceil(usageResponse.count / pageSize))
-      }
+      const count = usageResponse.count || 0
+      setTotalCount(count)
+      setTotalPages(count > 0 ? Math.max(1, Math.ceil(count / pageSize)) : 0)
     } catch (err) {
       console.error('Error loading stock usage data:', err)
-      setError('Failed to load stock usage data')
+      setError('Failed to load stock usage data. Click retry to try again.')
     } finally {
       setLoading(false)
     }
+  }, [currentPage, pageSize])
+
+  useEffect(() => {
+    loadStockUsageData()
+  }, [loadStockUsageData, refreshTrigger, retryCount])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterType, filterDateRange])
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1)
   }
 
   const getUsageTypeIcon = (type: string) => {
@@ -146,9 +158,10 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
       <div className="text-center py-8">
         <p className="text-red-600 mb-4">{error}</p>
         <button
-          onClick={loadStockUsageData}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          onClick={handleRetry}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
+          <RefreshCw size={16} />
           Retry
         </button>
       </div>

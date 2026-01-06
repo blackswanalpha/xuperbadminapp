@@ -67,19 +67,17 @@ export default function VehicleHistoryPage() {
     const params = useParams()
     const router = useRouter()
     const { toast } = useToast()
-    const registration = params.registration as string
+    const id = params.id as string
     const [loading, setLoading] = useState(true)
     const [vehicleData, setVehicleData] = useState<VehicleHistoryData | null>(null)
 
     useEffect(() => {
         const loadVehicleHistory = async () => {
             try {
-                const allJobCards = await fetchJobCards()
-
-                // Filter job cards for this specific vehicle
-                const vehicleJobCards = allJobCards.filter(job =>
-                    job.registration_number.toUpperCase() === registration.toUpperCase()
-                ).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
+                // The 'id' in the URL is actually the registration number passed from the details page
+                const registration = id;
+                const jobCardsResponse = await fetchJobCards(1, 1000, { registration_number: registration });
+                const vehicleJobCards = jobCardsResponse.results || [];
 
                 if (vehicleJobCards.length === 0) {
                     setVehicleData(null)

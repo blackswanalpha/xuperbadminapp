@@ -66,19 +66,14 @@ export default function GarageVehicleDetailsPage() {
         const loadData = async () => {
             if (!id) return
             try {
-                const [vehicleResult, allJobCards] = await Promise.all([
-                    fetchVehicle(Number(id)),
-                    fetchJobCards()
-                ])
+                const vehicleResult = await fetchVehicle(Number(id));
+                setVehicle(vehicleResult);
 
-                setVehicle(vehicleResult)
-
-                // Filter job cards for this vehicle
-                const vehicleJobCards = allJobCards.filter(job =>
-                    job.registration_number.toUpperCase() === vehicleResult.registration_number.toUpperCase()
-                ).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
-
-                setJobCards(vehicleJobCards)
+                // Fetch job cards for this specific vehicle registration
+                const jobCardsResponse = await fetchJobCards(1, 100, {
+                    registration_number: vehicleResult.registration_number
+                });
+                setJobCards(jobCardsResponse.results || []);
             } catch (error) {
                 console.error('Error loading vehicle data:', error)
                 toast({
