@@ -11,9 +11,9 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // Try multiple token keys for compatibility
-        let token = typeof window !== 'undefined' ? 
-            localStorage.getItem('access_token') || 
-            localStorage.getItem('token') || 
+        let token = typeof window !== 'undefined' ?
+            localStorage.getItem('access_token') ||
+            localStorage.getItem('token') ||
             localStorage.getItem('authToken') : null;
 
         // Note: For production, tokens should be obtained through proper login flow
@@ -35,9 +35,19 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Handle unauthorized access (e.g., redirect to login)
+            // Handle unauthorized access - clear auth and redirect to login
             if (typeof window !== 'undefined') {
-                // window.location.href = '/login';
+                // Don't redirect if already on login page
+                if (!window.location.pathname.includes('/login')) {
+                    // Clear all auth data
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('rememberMeExpiry');
+                    // Redirect to login
+                    window.location.href = '/login';
+                }
             }
         }
         return Promise.reject(error);

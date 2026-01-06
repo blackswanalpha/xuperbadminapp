@@ -18,7 +18,7 @@ interface AuthContextType {
   token: string | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User | null) => void
   setToken: (token: string | null) => void
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [token, user])
 
-  const login = async (email: string, password: string, rememberMe?: boolean) => {
+  const login = async (email: string, password: string) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1031/api/v1'}/users/auth/login/`, {
         method: 'POST',
@@ -96,20 +96,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const data = await response.json()
-      
+
       setToken(data.access)
       setUser(data.user)
 
-      // Handle remember me functionality
-      if (rememberMe) {
-        // Set expiry to 30 days from now
-        const expiryDate = new Date()
-        expiryDate.setDate(expiryDate.getDate() + 30)
-        localStorage.setItem('rememberMeExpiry', expiryDate.toISOString())
-      } else {
-        // Clear remember me if not checked
-        localStorage.removeItem('rememberMeExpiry')
-      }
+      // Always persist for 30 days (authentication persistence)
+      const expiryDate = new Date()
+      expiryDate.setDate(expiryDate.getDate() + 30)
+      localStorage.setItem('rememberMeExpiry', expiryDate.toISOString())
 
       // Redirect based on role
       if (data.user.role === 'ADMIN') {
@@ -148,7 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     localStorage.removeItem('rememberMeExpiry')
-    
+
     // Redirect to login
     router.push('/login')
   }

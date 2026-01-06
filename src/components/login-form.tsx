@@ -28,7 +28,6 @@ export default function LoginForm({ onSubmit, isLoading = false }: LoginFormProp
     defaultValues: {
       email: '',
       password: '',
-      rememberMe: false
     }
   })
 
@@ -38,7 +37,7 @@ export default function LoginForm({ onSubmit, isLoading = false }: LoginFormProp
       if (onSubmit) {
         onSubmit(data)
       } else {
-        await login(data.email, data.password, data.rememberMe || false)
+        await login(data.email, data.password)
       }
     } catch (error) {
       setLoginError('Invalid email or password. Please try again.')
@@ -127,34 +126,6 @@ export default function LoginForm({ onSubmit, isLoading = false }: LoginFormProp
         )}
       </div>
 
-      {/* Remember Me Checkbox */}
-      <motion.div
-        className="flex items-center space-x-2"
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.3, duration: 0.4 }}
-      >
-        <motion.div
-          className="relative"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <input
-            {...register('rememberMe')}
-            type="checkbox"
-            id="rememberMe"
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-          />
-        </motion.div>
-        <motion.label
-          htmlFor="rememberMe"
-          className="text-sm text-gray-700 cursor-pointer select-none"
-          whileHover={{ color: "#1d4ed8" }}
-          transition={{ duration: 0.2 }}
-        >
-          Remember me for 30 days
-        </motion.label>
-      </motion.div>
 
       <motion.button
         whileHover={{ scale: 1.02 }}

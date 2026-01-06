@@ -78,7 +78,7 @@ export default function AddUserPage() {
       ...prev,
       [field]: value,
     }))
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
@@ -107,9 +107,12 @@ export default function AddUserPage() {
     if (!formData.name.trim()) newErrors.name = 'Name is required'
     if (!formData.email.trim()) newErrors.email = 'Email is required'
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
-    if (!formData.password) newErrors.password = 'Password is required'
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+    // Password validation - only for Staff/Driver and Supervisor
+    if (['Driver', 'Supervisor'].includes(formData.role)) {
+      if (!formData.password) newErrors.password = 'Password is required'
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match'
+      }
     }
 
     // Email validation
@@ -150,7 +153,7 @@ export default function AddUserPage() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setLoading(true)
@@ -168,7 +171,7 @@ export default function AddUserPage() {
 
       await createUser(userData)
       setSuccess(`${formData.role.toLowerCase()} created successfully!`)
-      
+
       // Reset form
       setTimeout(() => {
         router.push('/admin/user-management')
@@ -183,8 +186,8 @@ export default function AddUserPage() {
     }
   }
 
-  // Common form fields component
-  const CommonFields = () => (
+  // Common form fields render function
+  const renderCommonFields = () => (
     <div className="space-y-6">
       {/* Basic Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -198,9 +201,8 @@ export default function AddUserPage() {
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${
-                errors.name ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${errors.name ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
               placeholder="Enter full name"
               disabled={loading}
             />
@@ -218,9 +220,8 @@ export default function AddUserPage() {
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${
-                errors.email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${errors.email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
               placeholder="Enter email address"
               disabled={loading}
             />
@@ -240,9 +241,8 @@ export default function AddUserPage() {
               type="tel"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${
-                errors.phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${errors.phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
               placeholder="+254712345678"
               disabled={loading}
             />
@@ -283,51 +283,51 @@ export default function AddUserPage() {
           />
         </div>
       </div>
+    </div>
+  )
 
-      {/* Password Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-            Password *
-          </label>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg border transition-all ${
-              errors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+  // Separated password fields render function
+  const renderPasswordFields = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
+          Password *
+        </label>
+        <input
+          type="password"
+          value={formData.password}
+          onChange={(e) => handleInputChange('password', e.target.value)}
+          className={`w-full px-4 py-3 rounded-lg border transition-all ${errors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
             }`}
-            placeholder="Enter password"
-            disabled={loading}
-          />
-          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
-        </div>
+          placeholder="Enter password"
+          disabled={loading}
+        />
+        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-            Confirm Password *
-          </label>
-          <input
-            type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg border transition-all ${
-              errors.confirmPassword ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
+          Confirm Password *
+        </label>
+        <input
+          type="password"
+          value={formData.confirmPassword}
+          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+          className={`w-full px-4 py-3 rounded-lg border transition-all ${errors.confirmPassword ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
             }`}
-            placeholder="Confirm password"
-            disabled={loading}
-          />
-          {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
-        </div>
+          placeholder="Confirm password"
+          disabled={loading}
+        />
+        {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
       </div>
     </div>
   )
 
   // Client-specific fields
-  const ClientFields = () => (
+  const renderClientFields = () => (
     <div className="space-y-6">
-      <CommonFields />
-      
+      {renderCommonFields()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
@@ -339,9 +339,8 @@ export default function AddUserPage() {
               type="text"
               value={formData.idNumber || ''}
               onChange={(e) => handleInputChange('idNumber', e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${
-                errors.idNumber ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${errors.idNumber ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
               placeholder="Enter ID number"
               disabled={loading}
             />
@@ -367,10 +366,10 @@ export default function AddUserPage() {
   )
 
   // Agent-specific fields
-  const AgentFields = () => (
+  const renderAgentFields = () => (
     <div className="space-y-6">
-      <CommonFields />
-      
+      {renderCommonFields()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
@@ -383,9 +382,8 @@ export default function AddUserPage() {
             step="0.1"
             value={formData.commissionRate || ''}
             onChange={(e) => handleInputChange('commissionRate', parseFloat(e.target.value) || 0)}
-            className={`w-full px-4 py-3 rounded-lg border transition-all ${
-              errors.commissionRate ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-            }`}
+            className={`w-full px-4 py-3 rounded-lg border transition-all ${errors.commissionRate ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+              }`}
             placeholder="5.0"
             disabled={loading}
           />
@@ -424,10 +422,11 @@ export default function AddUserPage() {
   )
 
   // Staff/Driver-specific fields
-  const StaffFields = () => (
+  const renderStaffFields = () => (
     <div className="space-y-6">
-      <CommonFields />
-      
+      {renderCommonFields()}
+      {renderPasswordFields()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
@@ -439,9 +438,8 @@ export default function AddUserPage() {
               type="text"
               value={formData.drivingLicense || ''}
               onChange={(e) => handleInputChange('drivingLicense', e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${
-                errors.drivingLicense ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border transition-all ${errors.drivingLicense ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
               placeholder="Enter driving license number"
               disabled={loading}
             />
@@ -481,10 +479,11 @@ export default function AddUserPage() {
   )
 
   // Supervisor-specific fields
-  const SupervisorFields = () => (
+  const renderSupervisorFields = () => (
     <div className="space-y-6">
-      <CommonFields />
-      
+      {renderCommonFields()}
+      {renderPasswordFields()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
@@ -493,9 +492,8 @@ export default function AddUserPage() {
           <select
             value={formData.supervisorLevel || ''}
             onChange={(e) => handleInputChange('supervisorLevel', e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg border transition-all ${
-              errors.supervisorLevel ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-            }`}
+            className={`w-full px-4 py-3 rounded-lg border transition-all ${errors.supervisorLevel ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+              }`}
             disabled={loading}
           >
             <option value="">Select supervisor level</option>
@@ -543,11 +541,11 @@ export default function AddUserPage() {
   // Get form fields based on selected role
   const getCurrentFormFields = () => {
     switch (activeRole) {
-      case 'Client': return <ClientFields />
-      case 'Agent': return <AgentFields />
-      case 'Driver': return <StaffFields />
-      case 'Supervisor': return <SupervisorFields />
-      default: return <CommonFields />
+      case 'Client': return renderClientFields()
+      case 'Agent': return renderAgentFields()
+      case 'Driver': return renderStaffFields()
+      case 'Supervisor': return renderSupervisorFields()
+      default: return renderCommonFields()
     }
   }
 
@@ -632,7 +630,7 @@ export default function AddUserPage() {
                 <X size={18} className="inline mr-2" />
                 Cancel
               </button>
-              
+
               <button
                 type="submit"
                 className="px-6 py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
