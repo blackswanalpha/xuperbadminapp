@@ -229,98 +229,7 @@ export const fetchVehicleIncomeBreakdown = async (
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle income breakdown:', error);
-        // Return mock data for now since backend endpoint might not exist yet
-        const monthlyData = [
-            { month: 'Jan', income: 45000 },
-            { month: 'Feb', income: 42000 },
-            { month: 'Mar', income: 48000 },
-            { month: 'Apr', income: 45000 },
-            { month: 'May', income: 52000 },
-            { month: 'Jun', income: 47000 }
-        ];
-
-        const totalIncome = monthlyData.reduce((sum, month) => sum + month.income, 0);
-
-        return {
-            total_income: totalIncome,
-            total_pending: 25000,
-            income_by_source: [
-                { source: 'Rental Income', amount: 150000, percentage: 75, count: 12 },
-                { source: 'Late Fees', amount: 15000, percentage: 15, count: 3 },
-                { source: 'Damage Recovery', amount: 10000, percentage: 10, count: 2 }
-            ],
-            monthly_income_trend: monthlyData.map(m => ({ month: m.month, amount: m.income })),
-            income_trends: {
-                monthly: monthlyData,
-                weekly: [
-                    { week: 'Week 1', income: 11000 },
-                    { week: 'Week 2', income: 12500 },
-                    { week: 'Week 3', income: 10800 },
-                    { week: 'Week 4', income: 13700 }
-                ]
-            },
-            contracts: [
-                {
-                    contract_id: 'C001',
-                    contract_number: 'CNT-001-2024',
-                    client_name: 'John Doe',
-                    start_date: '2024-01-15',
-                    end_date: '2024-07-15',
-                    total_value: 45000,
-                    amount_paid: 35000,
-                    balance_due: 10000,
-                    status: 'Active'
-                },
-                {
-                    contract_id: 'C002',
-                    contract_number: 'CNT-002-2024',
-                    client_name: 'Jane Smith',
-                    start_date: '2024-02-01',
-                    end_date: '2024-08-01',
-                    total_value: 38000,
-                    amount_paid: 38000,
-                    balance_due: 0,
-                    status: 'Active'
-                },
-                {
-                    contract_id: 'C003',
-                    contract_number: 'CNT-003-2024',
-                    client_name: 'Peter Wilson',
-                    start_date: '2024-03-10',
-                    end_date: '2024-06-10',
-                    total_value: 42000,
-                    amount_paid: 42000,
-                    balance_due: 0,
-                    status: 'Completed'
-                }
-            ],
-            payments: [
-                {
-                    payment_id: 'P001',
-                    amount: 35000,
-                    payment_date: '2024-12-01',
-                    method: 'Bank Transfer',
-                    status: 'Completed',
-                    contract_number: 'CNT-001-2024'
-                },
-                {
-                    payment_id: 'P002',
-                    amount: 38000,
-                    payment_date: '2024-12-05',
-                    method: 'Mobile Money',
-                    status: 'Completed',
-                    contract_number: 'CNT-002-2024'
-                },
-                {
-                    payment_id: 'P003',
-                    amount: 42000,
-                    payment_date: '2024-12-08',
-                    method: 'Cash',
-                    status: 'Completed',
-                    contract_number: 'CNT-003-2024'
-                }
-            ]
-        };
+        throw error;
     }
 };
 
@@ -338,33 +247,7 @@ export const fetchVehicleExpenseBreakdown = async (
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle expense breakdown:', error);
-        // Return mock data for now since backend endpoint might not exist yet
-        const monthlyExpenseData = [
-            { month: 'Jan', amount: 18000 },
-            { month: 'Feb', amount: 22000 },
-            { month: 'Mar', amount: 19000 },
-            { month: 'Apr', amount: 21000 },
-            { month: 'May', amount: 23000 },
-            { month: 'Jun', amount: 20000 }
-        ];
-
-        return {
-            total_expenses: monthlyExpenseData.reduce((sum, month) => sum + month.amount, 0),
-            expenses_by_category: [
-                { category: 'Maintenance', amount: 35000, percentage: 45, count: 8 },
-                { category: 'Fuel', amount: 25000, percentage: 32, count: 15 },
-                { category: 'Insurance', amount: 12000, percentage: 15, count: 4 },
-                { category: 'Registration', amount: 8000, percentage: 8, count: 2 }
-            ],
-            monthly_expense_trend: monthlyExpenseData,
-            expenses_by_month: monthlyExpenseData,
-            expenses_by_week: [
-                { week: 'Week 1', amount: 4500 },
-                { week: 'Week 2', amount: 5200 },
-                { week: 'Week 3', amount: 4800 },
-                { week: 'Week 4', amount: 6500 }
-            ]
-        };
+        throw error;
     }
 };
 
@@ -374,44 +257,7 @@ export const fetchVehicleProfitabilityAnalysis = async (id: number | string): Pr
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle profitability analysis:', error);
-        // Return mock data for now since backend endpoint might not exist yet
-        const totalIncome = 180000 + Math.random() * 50000;
-        const totalExpenses = 75000 + Math.random() * 20000;
-        const netProfit = totalIncome - totalExpenses;
-        const purchasePrice = 800000 + Math.random() * 200000;
-        const monthsInService = 8 + Math.random() * 4;
-
-        return {
-            vehicle_id: id.toString(),
-            registration_number: 'MOCK' + Math.floor(Math.random() * 1000),
-            performance_metrics: {
-                total_income: totalIncome,
-                total_expenses: totalExpenses,
-                revenue_per_contract: totalIncome / 12, // assuming 12 contracts
-                utilization_rate: 75 + Math.random() * 20,
-                net_profit_loss: netProfit
-            },
-            time_analysis: {
-                months_in_service: Math.round(monthsInService),
-                avg_monthly_income: totalIncome / monthsInService,
-                avg_monthly_expenses: totalExpenses / monthsInService,
-                break_even_point: netProfit > 0 ? 'Reached' : 'Not reached',
-                payback_period_months: Math.round(purchasePrice / (totalIncome / monthsInService))
-            },
-            investment_analysis: {
-                purchase_price: purchasePrice,
-                total_invested: purchasePrice,
-                total_returns: totalIncome,
-                net_gain_loss: totalIncome - purchasePrice,
-                roi_percentage: ((totalIncome - purchasePrice) / purchasePrice) * 100
-            },
-            financial_health: {
-                is_profitable: netProfit > 0,
-                expense_ratio_percentage: (totalExpenses / totalIncome) * 100,
-                profit_margin_percentage: (netProfit / totalIncome) * 100,
-                payback_period_months: Math.round(purchasePrice / (totalIncome / monthsInService))
-            }
-        };
+        throw error;
     }
 };
 

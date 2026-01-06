@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { fetchVehicles, Vehicle, deleteVehicle, fetchVehicleStatistics } from '@/lib/api'
+import { fetchVehicles, Vehicle, deleteVehicle, fetchVehicleStatistics, fetchSuppliers, Supplier } from '@/lib/api'
 
 import { motion } from 'framer-motion'
 import { Car, Wrench, Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
@@ -11,6 +11,7 @@ import { colors } from '@/lib/theme/colors'
 
 export default function FleetManagementPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [statistics, setStatistics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -35,11 +36,13 @@ export default function FleetManagementPage() {
     const loadData = async () => {
       try {
         setLoading(true)
-        const [vehiclesResponse, statsData] = await Promise.all([
+        const [vehiclesResponse, statsData, suppliersData] = await Promise.all([
           fetchVehicles(currentPage, pageSize),
-          fetchVehicleStatistics().catch(() => null) // Statistics might not be available
+          fetchVehicleStatistics().catch(() => null), // Statistics might not be available
+          fetchSuppliers()
         ])
         setVehicles(vehiclesResponse.vehicles)
+        setSuppliers(suppliersData)
         setFilteredVehicles(vehiclesResponse.vehicles)
         setTotalPages(vehiclesResponse.totalPages)
         setTotalCount(vehiclesResponse.totalCount)
@@ -79,10 +82,9 @@ export default function FleetManagementPage() {
     // Apply supplier filter
     if (supplierFilter !== 'ALL') {
       filtered = filtered.filter(vehicle => {
-        if (typeof vehicle.supplier === 'string') {
-          return vehicle.supplier === supplierFilter
-        }
-        return vehicle.supplier?.name === supplierFilter
+        const supplierId = typeof vehicle.supplier === 'string' ? vehicle.supplier : vehicle.supplier?.id
+        const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'Unknown'
+        return supplierName === supplierFilter
       })
     }
 
@@ -103,7 +105,7 @@ export default function FleetManagementPage() {
     })
 
     setFilteredVehicles(filtered)
-  }, [vehicles, searchTerm, statusFilter, supplierFilter, sortBy, sortOrder])
+  }, [vehicles, suppliers, searchTerm, statusFilter, supplierFilter, sortBy, sortOrder])
 
   const handleDeleteVehicle = async () => {
     if (!selectedVehicle) return
@@ -244,10 +246,8 @@ export default function FleetManagementPage() {
               >
                 <option value="ALL">All Suppliers</option>
                 {Array.from(new Set(vehicles.map(v => {
-                  if (typeof v.supplier === 'string') {
-                    return v.supplier
-                  }
-                  return v.supplier?.name
+                  const supplierId = typeof v.supplier === 'string' ? v.supplier : v.supplier?.id
+                  return suppliers.find(s => s.id === supplierId)?.name
                 }).filter(Boolean))).map(supplierName => (
                   <option key={supplierName} value={supplierName}>{supplierName}</option>
                 ))}
@@ -345,10 +345,11 @@ export default function FleetManagementPage() {
                         {vehicle.registration_number}
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {typeof vehicle.supplier === 'string'
-                          ? vehicle.supplier
-                          : vehicle.supplier?.name || 'No Supplier'
-                        }
+                        {(() => {
+                          const supplierId = typeof vehicle.supplier === 'string' ? vehicle.supplier : vehicle.supplier?.id
+                          const supplier = suppliers.find(s => s.id === supplierId)
+                          return supplier ? supplier.name : 'Unknown'
+                        })()}
                       </td>
                       <td className="py-3 px-4">
                         <span
@@ -441,8 +442,8 @@ export default function FleetManagementPage() {
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
-                          ? 'text-white'
-                          : 'hover:bg-gray-100'
+                        ? 'text-white'
+                        : 'hover:bg-gray-100'
                         }`}
                       style={{
                         backgroundColor: currentPage === pageNum ? colors.adminPrimary : 'transparent',

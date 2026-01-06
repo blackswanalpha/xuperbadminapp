@@ -70,34 +70,67 @@ export default function GarageManagementPage() {
     loadData()
   }, [])
 
+  // Calculate statistics
+  const jobsCompletedToday = Array.isArray(jobCards) ? jobCards.filter(jc =>
+    jc.status?.toLowerCase() === 'completed' &&
+    jc.date_completed === new Date().toISOString().split('T')[0]
+  ).length : 0
+
+  const activeJobCardsCount = Array.isArray(jobCards) ? jobCards.filter(jc =>
+    ['PENDING', 'IN_PROGRESS', 'pending', 'in_progress'].includes(jc.status)
+  ).length : 0
+
+  const availableEquipmentCount = Array.isArray(equipment) ? equipment.filter(eq =>
+    eq.status === 'AVAILABLE'
+  ).length : 0
+
+  // Calculate weekly stats
+  const now = new Date()
+  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()))
+  startOfWeek.setHours(0, 0, 0, 0)
+
+  const jobsCompletedThisWeek = Array.isArray(jobCards) ? jobCards.filter(jc => {
+    if (jc.status?.toLowerCase() !== 'completed' || !jc.date_completed) return false
+    const completionDate = new Date(jc.date_completed)
+    return completionDate >= startOfWeek
+  }).length : 0
+
+  // Calculate average completion time
+  const completedJobsWithDates = Array.isArray(jobCards) ? jobCards.filter(jc =>
+    jc.status?.toLowerCase() === 'completed' && jc.date_completed && jc.date_created
+  ) : []
+
+  const totalCompletionTimeMs = completedJobsWithDates.reduce((acc, jc) => {
+    const start = new Date(jc.date_created).getTime()
+    const end = new Date(jc.date_completed!).getTime()
+    return acc + (end - start)
+  }, 0)
+
+  const avgCompletionTimeDays = completedJobsWithDates.length > 0
+    ? (totalCompletionTimeMs / completedJobsWithDates.length / (1000 * 60 * 60 * 24)).toFixed(1)
+    : '0.0'
+
+  // Calculate Urgent Jobs
+  const urgentJobsCount = Array.isArray(jobCards) ? jobCards.filter(jc => jc.priority === 'URGENT').length : 0
+
   const garageStats = [
     {
       title: 'Active Job Cards',
-      value: (Array.isArray(jobCards) ? jobCards.filter(jc => ['PENDING', 'IN_PROGRESS', 'pending', 'in_progress'].includes(jc.status)).length : 0).toString(),
+      value: activeJobCardsCount.toString(),
       icon: ClipboardList,
-      trend: { value: '+3', isPositive: true },
       color: colors.adminPrimary,
     },
     {
       title: 'Completed Today',
-      value: (Array.isArray(jobCards) ? jobCards.filter(jc => jc.status?.toLowerCase() === 'completed' && jc.date_completed === new Date().toISOString().split('T')[0]).length : 0).toString(),
+      value: jobsCompletedToday.toString(),
       icon: CheckCircle,
-      trend: { value: '+2', isPositive: true },
       color: colors.adminSuccess,
     },
     {
       title: 'Available Equipment',
-      value: (Array.isArray(equipment) ? equipment.filter(eq => eq.status === 'AVAILABLE').length : 0).toString(),
+      value: availableEquipmentCount.toString(),
       icon: Wrench,
-      trend: { value: '0', isPositive: true },
       color: colors.adminAccent,
-    },
-    {
-      title: 'Revenue This Month',
-      value: 'KSh 245,000',
-      icon: BarChart3,
-      trend: { value: '+12%', isPositive: true },
-      color: colors.adminPrimary,
     },
   ]
 
@@ -534,20 +567,20 @@ export default function GarageManagementPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminPrimary}05` }}>
             <h3 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Jobs Completed This Week</h3>
-            <div className="text-2xl font-bold" style={{ color: colors.adminPrimary }}>12</div>
-            <div className="text-sm" style={{ color: colors.textSecondary }}>+20% from last week</div>
+            <div className="text-2xl font-bold" style={{ color: colors.adminPrimary }}>{jobsCompletedThisWeek}</div>
+            <div className="text-sm" style={{ color: colors.textSecondary }}>Current week performance</div>
           </div>
 
           <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminSuccess}05` }}>
             <h3 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Average Completion Time</h3>
-            <div className="text-2xl font-bold" style={{ color: colors.adminSuccess }}>2.5 days</div>
-            <div className="text-sm" style={{ color: colors.textSecondary }}>-0.3 days improvement</div>
+            <div className="text-2xl font-bold" style={{ color: colors.adminSuccess }}>{avgCompletionTimeDays} days</div>
+            <div className="text-sm" style={{ color: colors.textSecondary }}>For completed jobs</div>
           </div>
 
           <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminAccent}05` }}>
-            <h3 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Customer Satisfaction</h3>
-            <div className="text-2xl font-bold" style={{ color: colors.adminAccent }}>4.6/5</div>
-            <div className="text-sm" style={{ color: colors.textSecondary }}>Based on 28 reviews</div>
+            <h3 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Urgent Jobs</h3>
+            <div className="text-2xl font-bold" style={{ color: colors.adminAccent }}>{urgentJobsCount}</div>
+            <div className="text-sm" style={{ color: colors.textSecondary }}>Requiring immediate attention</div>
           </div>
         </div>
       </DashboardCard>
@@ -571,7 +604,7 @@ export default function GarageManagementPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {garageStats.map((stat, index) => (
           <motion.div
             key={stat.title}
