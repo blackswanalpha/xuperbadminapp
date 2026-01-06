@@ -63,7 +63,7 @@ export default function FleetManagementPage() {
         const [vehiclesResponse, statsData, suppliersData] = await Promise.all([
           fetchVehicles(currentPage, 10, filters),
           fetchVehicleStatistics().catch(() => null),
-          fetchSuppliers()
+          fetchSuppliers().catch(() => [])
         ])
 
         setVehicles(vehiclesResponse.vehicles)
@@ -240,7 +240,6 @@ export default function FleetManagementPage() {
                   <option value="created_at">Date Added</option>
                   <option value="make">Make</option>
                   <option value="model">Model</option>
-                  <option value="year">Year</option>
                   <option value="registration_number">Registration</option>
                   <option value="status">Status</option>
                 </select>

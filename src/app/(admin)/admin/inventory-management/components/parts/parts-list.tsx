@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  AlertTriangle, 
+import {
+  Search,
+  Filter,
+  Plus,
+  Edit,
+  Trash2,
+  AlertTriangle,
   Package,
   TrendingDown,
   TrendingUp,
@@ -49,11 +49,18 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
   const [unitFilter, setUnitFilter] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [refreshTrigger])
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
+    loadData()
+  }, [refreshTrigger, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
     filterParts()
   }, [searchTerm, categoryFilter, supplierFilter, unitFilter, showLowStockOnly])
 
@@ -63,7 +70,7 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
       setError(null)
 
       const [partsResponse, categoriesResponse, suppliersResponse] = await Promise.all([
-        fetchParts({ ordering: '-created_at' }),
+        fetchParts({ ordering: '-created_at' }, currentPage, pageSize),
         fetchPartCategories(),
         fetchInventorySuppliers(),
       ])
@@ -71,6 +78,11 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
       setParts(partsResponse.results)
       setCategories(categoriesResponse.results)
       setSuppliers(suppliersResponse.results)
+
+      if (partsResponse.count) {
+        setTotalCount(partsResponse.count)
+        setTotalPages(Math.ceil(partsResponse.count / pageSize))
+      }
     } catch (err) {
       console.error('Error loading parts data:', err)
       setError('Failed to load parts data')
@@ -88,6 +100,7 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
     }
 
     try {
+      setLoading(true)
       const filters: PartsFilters = {
         ...(searchTerm && { search: searchTerm }),
         ...(categoryFilter && { category: parseInt(categoryFilter) }),
@@ -96,7 +109,7 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
         ordering: '-created_at',
       }
 
-      const response = await fetchParts(filters)
+      const response = await fetchParts(filters, currentPage, pageSize)
       let filteredParts = response.results
 
       if (showLowStockOnly) {
@@ -104,9 +117,15 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
       }
 
       setParts(filteredParts)
+      if (response.count) {
+        setTotalCount(response.count)
+        setTotalPages(Math.ceil(response.count / pageSize))
+      }
     } catch (err) {
       console.error('Error filtering parts:', err)
       setError('Failed to filter parts')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -185,21 +204,21 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
             <span className="text-lg font-semibold">{parts.length}</span>
           </div>
         </DashboardCard>
-        
+
         <DashboardCard title="Low Stock Alerts" subtitle={parts.filter(p => p.is_low_stock).length.toString()}>
           <div className="flex items-center gap-2">
             <AlertTriangle size={24} style={{ color: colors.adminWarning }} />
             <span className="text-lg font-semibold">{parts.filter(p => p.is_low_stock).length}</span>
           </div>
         </DashboardCard>
-        
+
         <DashboardCard title="Out of Stock" subtitle={parts.filter(p => p.current_stock === 0).length.toString()}>
           <div className="flex items-center gap-2">
             <TrendingDown size={24} style={{ color: colors.adminError }} />
             <span className="text-lg font-semibold">{parts.filter(p => p.current_stock === 0).length}</span>
           </div>
         </DashboardCard>
-        
+
         <DashboardCard title="Total Stock Value" subtitle={`KSh ${parts.reduce((sum, part) => sum + parseFloat(part.stock_value), 0).toLocaleString()}`}>
           <div className="flex items-center gap-2">
             <TrendingUp size={24} style={{ color: colors.adminSuccess }} />
@@ -228,7 +247,7 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
               style={{ borderColor: colors.borderLight }}
             />
           </div>
-          
+
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -242,7 +261,7 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
               </option>
             ))}
           </select>
-          
+
           <select
             value={supplierFilter}
             onChange={(e) => setSupplierFilter(e.target.value)}
@@ -256,7 +275,7 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
               </option>
             ))}
           </select>
-          
+
           <select
             value={unitFilter}
             onChange={(e) => setUnitFilter(e.target.value)}
@@ -309,126 +328,199 @@ export default function PartsList({ onEdit, onAdd, onStockAdjustment, refreshTri
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b" style={{ borderColor: colors.borderLight }}>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Part Details
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    SKU
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Category
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Stock Level
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Unit Cost
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Stock Value
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Status
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {parts.map((part, index) => {
-                  const status = getStockStatus(part)
-                  return (
-                    <motion.tr
-                      key={part.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.5 }}
-                      className="border-b hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <td className="py-3 px-4">
-                        <div>
-                          <h4 className="font-medium" style={{ color: colors.textPrimary }}>
-                            {part.name}
-                          </h4>
-                          <p className="text-sm" style={{ color: colors.textSecondary }}>
-                            {part.description}
-                          </p>
-                          {part.location && (
-                            <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>
-                              📍 {part.location}
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: colors.borderLight }}>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Part Details
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      SKU
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Category
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Stock Level
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Unit Cost
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Stock Value
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Status
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parts.map((part, index) => {
+                    const status = getStockStatus(part)
+                    return (
+                      <motion.tr
+                        key={part.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1, duration: 0.5 }}
+                        className="border-b hover:bg-gray-50 transition-colors"
+                        style={{ borderColor: colors.borderLight }}
+                      >
+                        <td className="py-3 px-4">
+                          <div>
+                            <h4 className="font-medium" style={{ color: colors.textPrimary }}>
+                              {part.name}
+                            </h4>
+                            <p className="text-sm" style={{ color: colors.textSecondary }}>
+                              {part.description}
                             </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-sm" style={{ color: colors.textPrimary }}>
-                        {part.sku}
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {part.category_name || 'Uncategorized'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-semibold" style={{ color: colors.textPrimary }}>
-                            {part.current_stock} {part.unit}
+                            {part.location && (
+                              <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>
+                                📍 {part.location}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-sm" style={{ color: colors.textPrimary }}>
+                          {part.sku}
+                        </td>
+                        <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
+                          {part.category_name || 'Uncategorized'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-semibold" style={{ color: colors.textPrimary }}>
+                              {part.current_stock} {part.unit}
+                            </span>
+                            <span className="text-xs" style={{ color: colors.textSecondary }}>
+                              Min: {part.min_stock_level} | Max: {part.max_stock_level}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
+                          {formatCurrency(part.unit_cost)}
+                        </td>
+                        <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
+                          {formatCurrency(part.stock_value)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: `${status.color}20`,
+                              color: status.color,
+                            }}
+                          >
+                            {status.text}
                           </span>
-                          <span className="text-xs" style={{ color: colors.textSecondary }}>
-                            Min: {part.min_stock_level} | Max: {part.max_stock_level}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(part.unit_cost)}
-                      </td>
-                      <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(part.stock_value)}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: `${status.color}20`,
-                            color: status.color,
-                          }}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => onEdit(part)}
+                              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                              title="Edit Part"
+                            >
+                              <Edit size={16} style={{ color: colors.textSecondary }} />
+                            </button>
+                            <button
+                              onClick={() => onStockAdjustment(part)}
+                              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                              title="Adjust Stock"
+                            >
+                              <MoreHorizontal size={16} style={{ color: colors.textSecondary }} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePart(part)}
+                              className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-red-500"
+                              title="Delete Part"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: colors.borderLight }}>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} parts
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
+                              ? 'bg-blue-600 text-white'
+                              : 'hover:bg-gray-100'
+                            }`}
+                          style={currentPage !== pageNum ? { color: colors.textPrimary } : {}}
                         >
-                          {status.text}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onEdit(part)}
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                            title="Edit Part"
-                          >
-                            <Edit size={16} style={{ color: colors.textSecondary }} />
-                          </button>
-                          <button
-                            onClick={() => onStockAdjustment(part)}
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                            title="Adjust Stock"
-                          >
-                            <MoreHorizontal size={16} style={{ color: colors.textSecondary }} />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePart(part)}
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-red-500"
-                            title="Delete Part"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </DashboardCard>

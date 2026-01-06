@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Calendar, 
-  Package, 
-  User, 
+import {
+  Search,
+  Filter,
+  Plus,
+  Calendar,
+  Package,
+  User,
   TrendingDown,
   TrendingUp,
   Eye
@@ -39,22 +39,31 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
   const [filterType, setFilterType] = useState<string>('all')
   const [filterDateRange, setFilterDateRange] = useState<string>('all')
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+
   useEffect(() => {
     loadStockUsageData()
-  }, [refreshTrigger])
+  }, [refreshTrigger, currentPage])
 
   const loadStockUsageData = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const [usageResponse, statsResponse] = await Promise.all([
-        fetchStockUsage(),
-        fetchStockUsageStats(),
-      ])
+      const usageResponse = await fetchStockUsage({}, currentPage, pageSize)
+      const statsResponse = await fetchStockUsageStats()
 
       setStockUsage(usageResponse.results)
       setStats(statsResponse)
+
+      if (usageResponse.count) {
+        setTotalCount(usageResponse.count)
+        setTotalPages(Math.ceil(usageResponse.count / pageSize))
+      }
     } catch (err) {
       console.error('Error loading stock usage data:', err)
       setError('Failed to load stock usage data')
@@ -95,9 +104,9 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
 
   const filteredUsage = stockUsage.filter(usage => {
     const matchesSearch = usage.part_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         usage.part_sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         usage.used_by?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         usage.reference_number?.toLowerCase().includes(searchTerm.toLowerCase())
+      usage.part_sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      usage.used_by?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      usage.reference_number?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesType = filterType === 'all' || usage.usage_type === filterType
 
@@ -105,7 +114,7 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
     if (filterDateRange !== 'all') {
       const usageDate = new Date(usage.used_at)
       const now = new Date()
-      
+
       switch (filterDateRange) {
         case 'today':
           matchesDateRange = usageDate.toDateString() === now.toDateString()
@@ -236,7 +245,10 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
                   type="text"
                   placeholder="Search by part, SKU, user, or reference..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ borderColor: colors.borderLight }}
                 />
@@ -246,7 +258,10 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
             <div className="flex gap-3">
               <select
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                onChange={(e) => {
+                  setFilterType(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 style={{ borderColor: colors.borderLight }}
               >
@@ -259,7 +274,10 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
 
               <select
                 value={filterDateRange}
-                onChange={(e) => setFilterDateRange(e.target.value)}
+                onChange={(e) => {
+                  setFilterDateRange(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 style={{ borderColor: colors.borderLight }}
               >
@@ -289,14 +307,14 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
                   No Stock Usage Records
                 </h3>
                 <p style={{ color: colors.textSecondary }}>
-                  {searchTerm || filterType !== 'all' || filterDateRange !== 'all' 
+                  {searchTerm || filterType !== 'all' || filterDateRange !== 'all'
                     ? 'No usage records match your current filters'
                     : 'Start recording stock usage to track consumption patterns'
                   }
                 </p>
               </div>
             ) : (
-              <div className="min-w-full">
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-4">
                   {filteredUsage.map((usage) => (
                     <motion.div
@@ -375,6 +393,77 @@ export default function StockUsageList({ onAdd, onView, refreshTrigger }: StockU
                     </motion.div>
                   ))}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: colors.borderLight }}>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} records
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                        style={{ color: colors.textPrimary }}
+                      >
+                        First
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                        style={{ color: colors.textPrimary }}
+                      >
+                        Previous
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
+                                ? 'bg-blue-600 text-white'
+                                : 'hover:bg-gray-100'
+                                }`}
+                              style={currentPage !== pageNum ? { color: colors.textPrimary } : {}}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                        style={{ color: colors.textPrimary }}
+                      >
+                        Next
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                        style={{ color: colors.textPrimary }}
+                      >
+                        Last
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -42,7 +42,7 @@ export const fetchVehicles = async (
             if (filters.status && filters.status !== 'ALL') params.status = filters.status;
             if (filters.supplier && filters.supplier !== 'ALL') params.supplier = filters.supplier;
 
-            if (filters.sortBy) {
+            if (filters.sortBy && filters.sortBy !== 'year') {
                 const prefix = filters.sortOrder === 'desc' ? '-' : '';
                 params.ordering = `${prefix}${filters.sortBy}`;
             }
@@ -385,9 +385,12 @@ import {
 export * from '@/types/inventory-api';
 
 // Inventory Items API
-export const fetchInventoryItems = async (filters?: InventoryFilters): Promise<ApiResponse<InventoryItem>> => {
+export const fetchInventoryItems = async (filters?: InventoryFilters, page = 1, pageSize = 1000): Promise<ApiResponse<InventoryItem>> => {
     try {
         const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
         if (filters?.condition) params.append('condition', filters.condition);
         if (filters?.search) params.append('search', filters.search);
         if (filters?.ordering) params.append('ordering', filters.ordering);
@@ -466,8 +469,11 @@ export interface FinancialAnalysis {
 
 // Quick Management API Functions
 
-export const fetchInvoices = async (filters?: { search?: string, status?: string }): Promise<Invoice[]> => {
+export const fetchInvoices = async (filters?: { search?: string, status?: string }, page = 1, pageSize = 1000): Promise<Invoice[]> => {
     const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('page_size', pageSize.toString());
+
     if (filters?.search) params.append('search', filters.search);
     if (filters?.status) params.append('status', filters.status);
 
@@ -516,7 +522,7 @@ export const createInvoice = async (data: any): Promise<Invoice> => {
 export const fetchVehiclesForSelect = async (): Promise<Vehicle[]> => {
     try {
         // Fetch a large number of vehicles for dropdown
-        const response = await api.get<{ vehicles: Vehicle[] }>('/vehicles/?page_size=100');
+        const response = await api.get<{ vehicles: Vehicle[] }>('/vehicles/?page_size=1000');
         return response.data.vehicles;
     } catch (error) {
         console.error('Error fetching vehicles for select:', error);
@@ -526,7 +532,7 @@ export const fetchVehiclesForSelect = async (): Promise<Vehicle[]> => {
 
 export const fetchContractsForSelect = async (): Promise<Contract[]> => {
     try {
-        const response = await api.get('/contracts/?limit=100&status=ACTIVE');
+        const response = await api.get('/contracts/?limit=1000&status=ACTIVE');
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching contracts for select:', error);
@@ -595,9 +601,12 @@ export const fetchInventoryLocations = async (): Promise<{ locations: string[]; 
 };
 
 // Parts API
-export const fetchParts = async (filters?: PartsFilters): Promise<ApiResponse<Part>> => {
+export const fetchParts = async (filters?: PartsFilters, page = 1, pageSize = 1000): Promise<ApiResponse<Part>> => {
     try {
         const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
         if (filters?.category) params.append('category', filters.category.toString());
         if (filters?.supplier) params.append('supplier', filters.supplier.toString());
         if (filters?.unit) params.append('unit', filters.unit);
@@ -682,9 +691,9 @@ export const adjustPartStock = async (partId: string, data: CreateStockAdjustmen
 };
 
 // Part Categories API
-export const fetchPartCategories = async (): Promise<ApiResponse<PartCategory>> => {
+export const fetchPartCategories = async (page = 1, pageSize = 1000): Promise<ApiResponse<PartCategory>> => {
     try {
-        const response = await api.get('/inventory/categories/');
+        const response = await api.get(`/inventory/categories/?page=${page}&page_size=${pageSize}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching part categories:', error);
@@ -703,9 +712,9 @@ export const createPartCategory = async (data: Partial<PartCategory>): Promise<P
 };
 
 // Suppliers API (Inventory)
-export const fetchInventorySuppliers = async (): Promise<ApiResponse<InventorySupplier>> => {
+export const fetchInventorySuppliers = async (page = 1, pageSize = 1000): Promise<ApiResponse<InventorySupplier>> => {
     try {
-        const response = await api.get('/inventory/suppliers/');
+        const response = await api.get(`/inventory/suppliers/?page=${page}&page_size=${pageSize}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory suppliers:', error);
@@ -769,9 +778,12 @@ export const fetchSupplierStats = async (): Promise<SupplierStats> => {
 };
 
 // Stock Usage API
-export const fetchStockUsage = async (filters?: StockUsageFilters): Promise<ApiResponse<StockUsage>> => {
+export const fetchStockUsage = async (filters?: StockUsageFilters, page = 1, pageSize = 1000): Promise<ApiResponse<StockUsage>> => {
     try {
         const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
         if (filters?.vehicle) params.append('vehicle', filters.vehicle.toString());
         if (filters?.part) params.append('part', filters.part.toString());
         if (filters?.technician) params.append('technician', filters.technician.toString());
