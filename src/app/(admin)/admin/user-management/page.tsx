@@ -61,6 +61,7 @@ export default function UserManagementPage() {
     currentPage,
     totalPages,
     totalUsers,
+    pageSize,
     searchQuery,
     roleFilter,
     statusFilter,

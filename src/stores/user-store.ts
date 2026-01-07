@@ -29,6 +29,7 @@ interface UserState {
     currentPage: number
     totalPages: number
     totalUsers: number
+    pageSize: number
     searchQuery: string
     roleFilter: string
     statusFilter: string
@@ -65,6 +66,7 @@ const initialState = {
     currentPage: 1,
     totalPages: 1,
     totalUsers: 0,
+    pageSize: 10,
     searchQuery: '',
     roleFilter: '',
     statusFilter: '',
@@ -93,7 +95,7 @@ export const useUserStore = create<UserState>()(
                 try {
                     const params = new URLSearchParams()
                     params.append('page', p.toString())
-                    params.append('page_size', '10')
+                    params.append('page_size', state.pageSize.toString())
                     if (s) params.append('search', s)
                     if (r) params.append('role', r)
                     if (st) params.append('status', st)
@@ -105,7 +107,7 @@ export const useUserStore = create<UserState>()(
                     set({
                         users: usersData,
                         totalUsers: totalCount,
-                        totalPages: Math.ceil(totalCount / 10),
+                        totalPages: Math.ceil(totalCount / state.pageSize),
                         loading: false,
                     })
                 } catch (err: any) {
