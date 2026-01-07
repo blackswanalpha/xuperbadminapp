@@ -47,86 +47,33 @@ import {
   UserDashboardStats,
 } from '@/types/user-management'
 import RevenueChart from '@/components/shared/revenue-chart'
+import { useUserStore } from '@/stores/user-store'
 
 export default function UserManagementPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  // Data state
-  const [users, setUsers] = useState<User[]>([])
-  const [clientUsers, setClientUsers] = useState<ClientUser[]>([])
-  const [loyaltyPoints, setLoyaltyPoints] = useState<LoyaltyPoints[]>([])
-  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([])
-  const [userDashboardStats, setUserDashboardStats] = useState<UserDashboardStats>({
-    totalClients: 0,
-    activeClients: 0,
-    newClientsThisMonth: 0,
-    totalLoyaltyPoints: 0,
-    averageLoyaltyPoints: 0,
-    topTierClients: 0,
-  })
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalUsers, setTotalUsers] = useState(0)
-  const pageSize = 10
-
-  // Search and filter state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<string>('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-
-  // Fetch paginated users data
-  const fetchUsersData = async (page = 1, search = '', roleFilter = '', statusFilter = '') => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Build query parameters
-      const params = new URLSearchParams()
-      params.append('page', page.toString())
-      params.append('page_size', pageSize.toString())
-      if (search) params.append('search', search)
-      if (roleFilter) params.append('role', roleFilter)
-      if (statusFilter) params.append('status', statusFilter)
-
-      // Fetch users with pagination
-      const response = await api.get(`/users/?${params.toString()}`)
-      const usersData = response.data.results || response.data
-      const totalCount = response.data.count || usersData.length
-
-      setUsers(usersData)
-      setTotalUsers(totalCount)
-      setTotalPages(Math.ceil(totalCount / pageSize))
-
-    } catch (err: any) {
-      console.error('Error fetching users data:', err)
-      setError(err?.response?.data?.message || err?.message || 'Failed to fetch users data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Fetch dashboard data
-  const fetchDashboardData = async () => {
-    try {
-      const [clientUsersData, loyaltyPointsData, loyaltyTransactionsData, dashboardStatsData] = await Promise.all([
-        fetchClientUsers(),
-        fetchLoyaltyPoints(),
-        fetchLoyaltyTransactions({ limit: 10 }),
-        fetchUserDashboardStats(),
-      ])
-
-      setClientUsers(clientUsersData.results || [])
-      setLoyaltyPoints(loyaltyPointsData)
-      setLoyaltyTransactions(loyaltyTransactionsData)
-      setUserDashboardStats(dashboardStatsData)
-    } catch (err: any) {
-      console.error('Error fetching dashboard data:', err)
-    }
-  }
+  const {
+    users,
+    clientUsers,
+    loyaltyPoints,
+    loyaltyTransactions,
+    userDashboardStats,
+    currentPage,
+    totalPages,
+    totalUsers,
+    searchQuery,
+    roleFilter,
+    statusFilter,
+    loading,
+    error,
+    setSearchQuery,
+    setRoleFilter,
+    setStatusFilter,
+    setCurrentPage,
+    fetchUsersData,
+    fetchDashboardData,
+    deleteUser,
+  } = useUserStore()
 
   // Initial data fetch
   useEffect(() => {
@@ -135,23 +82,20 @@ export default function UserManagementPage() {
     } else {
       fetchDashboardData()
     }
-  }, [activeTab, currentPage, searchQuery, roleFilter, statusFilter])
+  }, [activeTab, currentPage, searchQuery, roleFilter, statusFilter, fetchUsersData, fetchDashboardData])
 
   // Handle search
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    setCurrentPage(1) // Reset to first page
   }
 
   // Handle filter changes
   const handleRoleFilter = (role: string) => {
     setRoleFilter(role)
-    setCurrentPage(1)
   }
 
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status)
-    setCurrentPage(1)
   }
 
   // Handle page change
@@ -164,8 +108,6 @@ export default function UserManagementPage() {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await deleteUser(userId)
-        // Refresh data after deletion
-        await fetchUsersData(currentPage, searchQuery, roleFilter, statusFilter)
       } catch (err: any) {
         console.error('Error deleting user:', err)
         alert('Failed to delete user. Please try again.')
@@ -806,8 +748,8 @@ export default function UserManagementPage() {
                           key={pageNum}
                           onClick={() => handlePageChange(pageNum)}
                           className={`px-3 py-2 rounded-lg transition-colors ${pageNum === currentPage
-                              ? 'text-white'
-                              : 'border hover:bg-gray-50'
+                            ? 'text-white'
+                            : 'border hover:bg-gray-50'
                             }`}
                           style={{
                             backgroundColor: pageNum === currentPage ? colors.adminPrimary : 'transparent',
