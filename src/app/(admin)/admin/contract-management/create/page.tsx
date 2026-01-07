@@ -41,7 +41,7 @@ export default function CreateContractPage() {
         ])
 
         setVehicles(vehiclesData.vehicles)
-        setClients((clientsData.results || []).filter(user => user.role === 'Client'))
+        setClients((clientsData.results || []).filter(user => user.role?.toUpperCase() === 'CLIENT'))
 
         // Generate default contract number
         const now = new Date()

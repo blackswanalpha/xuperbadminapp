@@ -65,7 +65,7 @@ export default function EditContractPage() {
         ])
 
         setVehicles(vehiclesData.vehicles)
-        setClients((clientsData.results || []).filter(user => user.role === 'Client'))
+        setClients((clientsData.results || []).filter(user => user.role?.toUpperCase() === 'CLIENT'))
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
