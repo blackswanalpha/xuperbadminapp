@@ -48,7 +48,7 @@ export const fetchVehicles = async (
             }
         }
 
-        const response = await api.get('/vehicles/', { params });
+        const response = await api.get('vehicles/', { params });
 
         // Handle paginated response
         if (response.data.results) {
@@ -74,7 +74,7 @@ export const fetchVehicles = async (
 
 export const fetchVehicle = async (id: number | string): Promise<Vehicle> => {
     try {
-        const response = await api.get(`/vehicles/${id}/`);
+        const response = await api.get(`vehicles/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle:', error);
@@ -84,7 +84,7 @@ export const fetchVehicle = async (id: number | string): Promise<Vehicle> => {
 
 export const createVehicle = async (data: Partial<Vehicle>): Promise<Vehicle> => {
     try {
-        const response = await api.post('/vehicles/', data);
+        const response = await api.post('vehicles/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating vehicle:', error);
@@ -94,7 +94,7 @@ export const createVehicle = async (data: Partial<Vehicle>): Promise<Vehicle> =>
 
 export const updateVehicle = async (id: number | string, data: Partial<Vehicle>): Promise<Vehicle> => {
     try {
-        const response = await api.put(`/vehicles/${id}/`, data);
+        const response = await api.put(`vehicles/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating vehicle:', error);
@@ -104,7 +104,7 @@ export const updateVehicle = async (id: number | string, data: Partial<Vehicle>)
 
 export const deleteVehicle = async (id: number | string): Promise<void> => {
     try {
-        await api.delete(`/vehicles/${id}/`);
+        await api.delete(`vehicles/${id}/`);
     } catch (error) {
         console.error('Error deleting vehicle:', error);
         throw error;
@@ -120,7 +120,7 @@ export const fetchSuppliers = async (page = 1, pageSize = 20, search?: string): 
         };
         if (search) params.search = search;
 
-        const response = await api.get('/suppliers/', { params });
+        const response = await api.get('suppliers/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching suppliers:', error);
@@ -157,7 +157,7 @@ export const fetchSuppliersPaginated = async (
             }
         }
 
-        const response = await api.get('/suppliers/', { params });
+        const response = await api.get('suppliers/', { params });
 
         // Handle paginated response
         if (response.data.results) {
@@ -183,7 +183,7 @@ export const fetchSuppliersPaginated = async (
 
 export const createSupplier = async (data: Partial<Supplier>): Promise<Supplier> => {
     try {
-        const response = await api.post('/suppliers/', data);
+        const response = await api.post('suppliers/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating supplier:', error);
@@ -193,7 +193,7 @@ export const createSupplier = async (data: Partial<Supplier>): Promise<Supplier>
 
 export const fetchSupplier = async (id: string): Promise<Supplier> => {
     try {
-        const response = await api.get(`/suppliers/${id}/`);
+        const response = await api.get(`suppliers/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching supplier:', error);
@@ -203,7 +203,7 @@ export const fetchSupplier = async (id: string): Promise<Supplier> => {
 
 export const updateSupplier = async (id: string, data: Partial<Supplier>): Promise<Supplier> => {
     try {
-        const response = await api.put(`/suppliers/${id}/`, data);
+        const response = await api.put(`suppliers/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating supplier:', error);
@@ -213,7 +213,7 @@ export const updateSupplier = async (id: string, data: Partial<Supplier>): Promi
 
 export const deleteSupplier = async (id: string): Promise<void> => {
     try {
-        await api.delete(`/suppliers/${id}/`);
+        await api.delete(`suppliers/${id}/`);
     } catch (error) {
         console.error('Error deleting supplier:', error);
         throw error;
@@ -229,7 +229,7 @@ export interface GeneralSupplierStats {
 
 export const fetchGeneralSupplierStats = async (): Promise<GeneralSupplierStats> => {
     try {
-        const response = await api.get('/suppliers/statistics/');
+        const response = await api.get('suppliers/statistics/');
         return response.data;
     } catch (error) {
         console.error('Error fetching supplier statistics:', error);
@@ -246,7 +246,7 @@ import { SupplierItem, AccountsPayable, SupplierPayment } from '@/types/supplier
 
 export const fetchSupplierItems = async (supplierId: string): Promise<SupplierItem[]> => {
     try {
-        const response = await api.get(`/suppliers/${supplierId}/items/`);
+        const response = await api.get(`suppliers/${supplierId}/items/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching supplier items:', error);
@@ -256,7 +256,7 @@ export const fetchSupplierItems = async (supplierId: string): Promise<SupplierIt
 
 export const fetchSupplierPayables = async (supplierId: string): Promise<AccountsPayable[]> => {
     try {
-        const response = await api.get(`/suppliers/${supplierId}/payables/`);
+        const response = await api.get(`suppliers/${supplierId}/payables/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching supplier payables:', error);
@@ -266,7 +266,7 @@ export const fetchSupplierPayables = async (supplierId: string): Promise<Account
 
 export const fetchSupplierPayments = async (supplierId: string): Promise<SupplierPayment[]> => {
     try {
-        const response = await api.get(`/suppliers/payments/`, {
+        const response = await api.get(`suppliers/payments/`, {
             params: { accounts_payable__supplier: supplierId }
         });
         return response.data.results || response.data;
@@ -278,7 +278,7 @@ export const fetchSupplierPayments = async (supplierId: string): Promise<Supplie
 
 export const fetchVehicleStatistics = async () => {
     try {
-        const response = await api.get('/vehicles/statistics/');
+        const response = await api.get('vehicles/statistics/');
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle statistics:', error);
@@ -288,7 +288,7 @@ export const fetchVehicleStatistics = async () => {
 
 export const fetchVehicleFinancialSummary = async (id: number | string) => {
     try {
-        const response = await api.get(`/vehicles/${id}/financial_summary/`);
+        const response = await api.get(`vehicles/${id}/financial_summary/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle financial summary:', error);
@@ -306,7 +306,7 @@ export const fetchVehicleIncomeBreakdown = async (
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
 
-        const response = await api.get(`/vehicles/${id}/income_breakdown/`, { params });
+        const response = await api.get(`vehicles/${id}/income_breakdown/`, { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle income breakdown:', error);
@@ -324,7 +324,7 @@ export const fetchVehicleExpenseBreakdown = async (
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
 
-        const response = await api.get(`/vehicles/${id}/expense_breakdown/`, { params });
+        const response = await api.get(`vehicles/${id}/expense_breakdown/`, { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle expense breakdown:', error);
@@ -334,7 +334,7 @@ export const fetchVehicleExpenseBreakdown = async (
 
 export const fetchVehicleProfitabilityAnalysis = async (id: number | string): Promise<VehicleProfitabilityAnalysis> => {
     try {
-        const response = await api.get(`/vehicles/${id}/profitability_analysis/`);
+        const response = await api.get(`vehicles/${id}/profitability_analysis/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle profitability analysis:', error);
@@ -391,7 +391,7 @@ export interface RecentActivitiesResponse {
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     try {
-        const response = await api.get('/dashboard/stats/');
+        const response = await api.get('dashboard/stats/');
         return response.data;
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -401,7 +401,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 
 export const fetchRecentActivities = async (): Promise<RecentActivitiesResponse> => {
     try {
-        const response = await api.get('/dashboard/activities/');
+        const response = await api.get('dashboard/activities/');
         return response.data;
     } catch (error) {
         console.error('Error fetching recent activities:', error);
@@ -456,7 +456,7 @@ export const fetchInventoryItems = async (filters?: InventoryFilters, page = 1, 
             if (filters.ordering) params.ordering = filters.ordering;
         }
 
-        const response = await api.get('/inventory/vehicles/', { params });
+        const response = await api.get('inventory/vehicles/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory items:', error);
@@ -466,7 +466,7 @@ export const fetchInventoryItems = async (filters?: InventoryFilters, page = 1, 
 
 export const fetchInventoryItem = async (vehicleId: number): Promise<InventoryItem> => {
     try {
-        const response = await api.get(`/inventory/vehicles/${vehicleId}/`);
+        const response = await api.get(`inventory/vehicles/${vehicleId}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory item:', error);
@@ -572,7 +572,7 @@ export const fetchFinancialAnalysis = async (days: number = 30): Promise<Financi
 
 export const createInvoice = async (data: any): Promise<Invoice> => {
     try {
-        const response = await api.post('/invoices/', data);
+        const response = await api.post('invoices/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating invoice:', error);
@@ -593,7 +593,7 @@ export const fetchVehiclesForSelect = async (): Promise<Vehicle[]> => {
 
 export const fetchContractsForSelect = async (): Promise<Contract[]> => {
     try {
-        const response = await api.get('/contracts/?limit=1000&status=ACTIVE');
+        const response = await api.get('contracts/?limit=1000&status=ACTIVE');
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching contracts for select:', error);
@@ -603,7 +603,7 @@ export const fetchContractsForSelect = async (): Promise<Contract[]> => {
 
 export const fetchVehicleDetailedInfo = async (vehicleId: number): Promise<VehicleDetailedInfo> => {
     try {
-        const response = await api.get(`/inventory/vehicles/${vehicleId}/detailed_info/`);
+        const response = await api.get(`inventory/vehicles/${vehicleId}/detailed_info/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching detailed vehicle info:', error);
@@ -614,7 +614,7 @@ export const fetchVehicleDetailedInfo = async (vehicleId: number): Promise<Vehic
 export const updateInventoryItem = async (vehicleId: number, data: Partial<InventoryItem>): Promise<InventoryItem> => {
     try {
         console.log('API: Updating inventory item', vehicleId, 'with data:', data);
-        const response = await api.put(`/inventory/vehicles/${vehicleId}/`, data);
+        const response = await api.put(`inventory/vehicles/${vehicleId}/`, data);
         console.log('API: Update successful:', response.data);
         return response.data;
     } catch (error: any) {
@@ -633,7 +633,7 @@ export const updateInventoryItem = async (vehicleId: number, data: Partial<Inven
 
 export const deleteInventoryItem = async (vehicleId: number): Promise<void> => {
     try {
-        await api.delete(`/inventory/vehicles/${vehicleId}/`);
+        await api.delete(`inventory/vehicles/${vehicleId}/`);
     } catch (error) {
         console.error('Error deleting inventory item:', error);
         throw error;
@@ -643,7 +643,7 @@ export const deleteInventoryItem = async (vehicleId: number): Promise<void> => {
 // Inventory Dashboard API
 export const fetchInventoryDashboard = async (): Promise<InventoryDashboardMetrics> => {
     try {
-        const response = await api.get('/inventory/vehicles/dashboard_summary/');
+        const response = await api.get('inventory/vehicles/dashboard_summary/');
         return response.data.metrics;
     } catch (error) {
         console.error('Error fetching inventory dashboard:', error);
@@ -653,7 +653,7 @@ export const fetchInventoryDashboard = async (): Promise<InventoryDashboardMetri
 
 export const fetchInventoryLocations = async (): Promise<{ locations: string[]; count: number }> => {
     try {
-        const response = await api.get('/inventory/vehicles/locations/');
+        const response = await api.get('inventory/vehicles/locations/');
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory locations:', error);
@@ -682,7 +682,7 @@ export const fetchParts = async (
             if (filters.low_stock !== undefined) params.low_stock = filters.low_stock;
         }
 
-        const response = await api.get('/inventory/parts/', { params });
+        const response = await api.get('inventory/parts/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching parts:', error);
@@ -692,7 +692,7 @@ export const fetchParts = async (
 
 export const fetchPart = async (partId: string): Promise<Part> => {
     try {
-        const response = await api.get(`/inventory/parts/${partId}/`);
+        const response = await api.get(`inventory/parts/${partId}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching part:', error);
@@ -702,7 +702,7 @@ export const fetchPart = async (partId: string): Promise<Part> => {
 
 export const createPart = async (data: Partial<Part>): Promise<Part> => {
     try {
-        const response = await api.post('/inventory/parts/', data);
+        const response = await api.post('inventory/parts/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating part:', error);
@@ -712,7 +712,7 @@ export const createPart = async (data: Partial<Part>): Promise<Part> => {
 
 export const updatePart = async (partId: string, data: Partial<Part>): Promise<Part> => {
     try {
-        const response = await api.put(`/inventory/parts/${partId}/`, data);
+        const response = await api.put(`inventory/parts/${partId}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating part:', error);
@@ -722,7 +722,7 @@ export const updatePart = async (partId: string, data: Partial<Part>): Promise<P
 
 export const deletePart = async (partId: string): Promise<void> => {
     try {
-        await api.delete(`/inventory/parts/${partId}/`);
+        await api.delete(`inventory/parts/${partId}/`);
     } catch (error) {
         console.error('Error deleting part:', error);
         throw error;
@@ -731,7 +731,7 @@ export const deletePart = async (partId: string): Promise<void> => {
 
 export const fetchLowStockParts = async (): Promise<Part[]> => {
     try {
-        const response = await api.get('/inventory/parts/low_stock/');
+        const response = await api.get('inventory/parts/low_stock/');
         return response.data;
     } catch (error) {
         console.error('Error fetching low stock parts:', error);
@@ -741,7 +741,7 @@ export const fetchLowStockParts = async (): Promise<Part[]> => {
 
 export const fetchPartsStockSummary = async () => {
     try {
-        const response = await api.get('/inventory/parts/stock_summary/');
+        const response = await api.get('inventory/parts/stock_summary/');
         return response.data;
     } catch (error) {
         console.error('Error fetching parts stock summary:', error);
@@ -751,7 +751,7 @@ export const fetchPartsStockSummary = async () => {
 
 export const adjustPartStock = async (partId: string, data: CreateStockAdjustment): Promise<StockAdjustment> => {
     try {
-        const response = await api.post(`/inventory/parts/${partId}/adjust_stock/`, data);
+        const response = await api.post(`inventory/parts/${partId}/adjust_stock/`, data);
         return response.data;
     } catch (error) {
         console.error('Error adjusting part stock:', error);
@@ -762,7 +762,7 @@ export const adjustPartStock = async (partId: string, data: CreateStockAdjustmen
 // Part Categories API
 export const fetchPartCategories = async (page = 1, pageSize = 1000): Promise<ApiResponse<PartCategory>> => {
     try {
-        const response = await api.get(`/inventory/categories/?page=${page}&page_size=${pageSize}`);
+        const response = await api.get(`inventory/categories/?page=${page}&page_size=${pageSize}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching part categories:', error);
@@ -772,7 +772,7 @@ export const fetchPartCategories = async (page = 1, pageSize = 1000): Promise<Ap
 
 export const createPartCategory = async (data: Partial<PartCategory>): Promise<PartCategory> => {
     try {
-        const response = await api.post('/inventory/categories/', data);
+        const response = await api.post('inventory/categories/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating part category:', error);
@@ -783,7 +783,7 @@ export const createPartCategory = async (data: Partial<PartCategory>): Promise<P
 // Suppliers API (Inventory)
 export const fetchInventorySuppliers = async (page = 1, pageSize = 1000): Promise<ApiResponse<InventorySupplier>> => {
     try {
-        const response = await api.get(`/inventory/suppliers/?page=${page}&page_size=${pageSize}`);
+        const response = await api.get(`inventory/suppliers/?page=${page}&page_size=${pageSize}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory suppliers:', error);
@@ -793,7 +793,7 @@ export const fetchInventorySuppliers = async (page = 1, pageSize = 1000): Promis
 
 export const createInventorySupplier = async (data: CreateInventorySupplier): Promise<InventorySupplier> => {
     try {
-        const response = await api.post('/inventory/suppliers/', data);
+        const response = await api.post('inventory/suppliers/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating inventory supplier:', error);
@@ -803,7 +803,7 @@ export const createInventorySupplier = async (data: CreateInventorySupplier): Pr
 
 export const fetchInventorySupplier = async (supplierId: string): Promise<InventorySupplier> => {
     try {
-        const response = await api.get(`/inventory/suppliers/${supplierId}/`);
+        const response = await api.get(`inventory/suppliers/${supplierId}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory supplier:', error);
@@ -813,7 +813,7 @@ export const fetchInventorySupplier = async (supplierId: string): Promise<Invent
 
 export const updateInventorySupplier = async (supplierId: string, data: Partial<InventorySupplier>): Promise<InventorySupplier> => {
     try {
-        const response = await api.patch(`/inventory/suppliers/${supplierId}/`, data);
+        const response = await api.patch(`inventory/suppliers/${supplierId}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating inventory supplier:', error);
@@ -823,7 +823,7 @@ export const updateInventorySupplier = async (supplierId: string, data: Partial<
 
 export const deleteInventorySupplier = async (supplierId: string): Promise<void> => {
     try {
-        await api.delete(`/inventory/suppliers/${supplierId}/`);
+        await api.delete(`inventory/suppliers/${supplierId}/`);
     } catch (error) {
         console.error('Error deleting inventory supplier:', error);
         throw error;
@@ -832,7 +832,7 @@ export const deleteInventorySupplier = async (supplierId: string): Promise<void>
 
 export const fetchSupplierStats = async (): Promise<SupplierStats> => {
     try {
-        const response = await api.get('/inventory/suppliers/stats/');
+        const response = await api.get('inventory/suppliers/stats/');
         return response.data;
     } catch (error) {
         console.error('Error fetching supplier stats:', error);
@@ -859,7 +859,7 @@ export const fetchStockUsage = async (filters?: StockUsageFilters, page = 1, pag
         if (filters?.search) params.append('search', filters.search);
         if (filters?.ordering) params.append('ordering', filters.ordering);
 
-        const response = await api.get(`/inventory/stock-usage/?${params.toString()}`);
+        const response = await api.get(`inventory/stock-usage/?${params.toString()}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching stock usage:', error);
@@ -869,7 +869,7 @@ export const fetchStockUsage = async (filters?: StockUsageFilters, page = 1, pag
 
 export const fetchStockUsageDetail = async (usageId: string): Promise<StockUsage> => {
     try {
-        const response = await api.get(`/inventory/stock-usage/${usageId}/`);
+        const response = await api.get(`inventory/stock-usage/${usageId}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching stock usage detail:', error);
@@ -879,7 +879,7 @@ export const fetchStockUsageDetail = async (usageId: string): Promise<StockUsage
 
 export const createStockUsage = async (data: CreateStockUsage): Promise<StockUsage> => {
     try {
-        const response = await api.post('/inventory/stock-usage/', data);
+        const response = await api.post('inventory/stock-usage/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating stock usage:', error);
@@ -889,7 +889,7 @@ export const createStockUsage = async (data: CreateStockUsage): Promise<StockUsa
 
 export const fetchStockUsageByVehicle = async (vehicleId: number): Promise<StockUsage[]> => {
     try {
-        const response = await api.get(`/inventory/stock-usage/by_vehicle/?vehicle_id=${vehicleId}`);
+        const response = await api.get(`inventory/stock-usage/by_vehicle/?vehicle_id=${vehicleId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching stock usage by vehicle:', error);
@@ -899,7 +899,7 @@ export const fetchStockUsageByVehicle = async (vehicleId: number): Promise<Stock
 
 export const fetchStockUsageByPart = async (partId: string): Promise<StockUsage[]> => {
     try {
-        const response = await api.get(`/inventory/stock-usage/by_part/?part_id=${partId}`);
+        const response = await api.get(`inventory/stock-usage/by_part/?part_id=${partId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching stock usage by part:', error);
@@ -909,7 +909,7 @@ export const fetchStockUsageByPart = async (partId: string): Promise<StockUsage[
 
 export const fetchStockUsageStats = async (): Promise<StockUsageStats> => {
     try {
-        const response = await api.get('/inventory/stock-usage/stats/');
+        const response = await api.get('inventory/stock-usage/stats/');
         return response.data;
     } catch (error) {
         console.error('Error fetching stock usage stats:', error);
@@ -926,7 +926,7 @@ export const fetchStockUsageStats = async (): Promise<StockUsageStats> => {
 // Stock Adjustments API
 export const fetchStockAdjustments = async (): Promise<ApiResponse<StockAdjustment>> => {
     try {
-        const response = await api.get('/inventory/stock-adjustments/');
+        const response = await api.get('inventory/stock-adjustments/');
         return response.data;
     } catch (error) {
         console.error('Error fetching stock adjustments:', error);
@@ -936,7 +936,7 @@ export const fetchStockAdjustments = async (): Promise<ApiResponse<StockAdjustme
 
 export const createStockAdjustment = async (data: CreateStockAdjustment): Promise<StockAdjustment> => {
     try {
-        const response = await api.post('/inventory/stock-adjustments/', data);
+        const response = await api.post('inventory/stock-adjustments/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating stock adjustment:', error);
@@ -947,7 +947,7 @@ export const createStockAdjustment = async (data: CreateStockAdjustment): Promis
 // Inventory Reports API
 export const fetchInventoryReports = async (): Promise<InventoryReports> => {
     try {
-        const response = await api.get('/inventory/vehicles/reports/');
+        const response = await api.get('inventory/vehicles/reports/');
         return response.data;
     } catch (error) {
         console.error('Error fetching inventory reports:', error);
@@ -961,7 +961,7 @@ export const fetchVehicleUtilizationReport = async (dateRange?: ReportDateRange)
         if (dateRange?.start_date) params.append('start_date', dateRange.start_date);
         if (dateRange?.end_date) params.append('end_date', dateRange.end_date);
 
-        const response = await api.get(`/inventory/reports/vehicle_utilization/?${params.toString()}`);
+        const response = await api.get(`inventory/reports/vehicle_utilization/?${params.toString()}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle utilization report:', error);
@@ -975,7 +975,7 @@ export const fetchPartsConsumptionReport = async (dateRange?: ReportDateRange): 
         if (dateRange?.start_date) params.append('start_date', dateRange.start_date);
         if (dateRange?.end_date) params.append('end_date', dateRange.end_date);
 
-        const response = await api.get(`/inventory/reports/parts_consumption/?${params.toString()}`);
+        const response = await api.get(`inventory/reports/parts_consumption/?${params.toString()}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching parts consumption report:', error);
@@ -985,7 +985,7 @@ export const fetchPartsConsumptionReport = async (dateRange?: ReportDateRange): 
 
 export const fetchStockValueReport = async (): Promise<StockValueReport> => {
     try {
-        const response = await api.get('/inventory/reports/stock_value/');
+        const response = await api.get('inventory/reports/stock_value/');
         return response.data;
     } catch (error) {
         console.error('Error fetching stock value report:', error);
@@ -995,7 +995,7 @@ export const fetchStockValueReport = async (): Promise<StockValueReport> => {
 
 export const fetchLowStockAlertsReport = async (): Promise<LowStockAlertsReport> => {
     try {
-        const response = await api.get('/inventory/reports/low_stock_alerts/');
+        const response = await api.get('inventory/reports/low_stock_alerts/');
         return response.data;
     } catch (error) {
         console.error('Error fetching low stock alerts report:', error);
@@ -1009,7 +1009,7 @@ export const fetchExpenseSummaryReport = async (dateRange?: ReportDateRange): Pr
         if (dateRange?.start_date) params.append('start_date', dateRange.start_date);
         if (dateRange?.end_date) params.append('end_date', dateRange.end_date);
 
-        const response = await api.get(`/inventory/reports/expense_summary/?${params.toString()}`);
+        const response = await api.get(`inventory/reports/expense_summary/?${params.toString()}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching expense summary report:', error);
@@ -1023,7 +1023,7 @@ export const fetchInventoryDashboardSummary = async (dateRange?: ReportDateRange
         if (dateRange?.start_date) params.append('start_date', dateRange.start_date);
         if (dateRange?.end_date) params.append('end_date', dateRange.end_date);
 
-        const response = await api.get(`/inventory/reports/dashboard_summary/?${params.toString()}`);
+        const response = await api.get(`inventory/reports/dashboard_summary/?${params.toString()}`);
         return response.data.metrics;
     } catch (error) {
         console.error('Error fetching inventory dashboard summary:', error);
@@ -1113,7 +1113,7 @@ export interface Payment {
 // Vehicle data fetching functions
 export const fetchPendingContracts = async (): Promise<Contract[]> => {
     try {
-        const response = await api.get('/contracts/?status=PENDING');
+        const response = await api.get('contracts/?status=PENDING');
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching pending contracts:', error);
@@ -1128,7 +1128,7 @@ export const fetchAllContracts = async (filters?: { status?: string; search?: st
         if (filters?.search) params.append('search', filters.search);
         if (filters?.limit) params.append('limit', filters.limit.toString());
 
-        const response = await api.get(`/contracts/?${params.toString()}`);
+        const response = await api.get(`contracts/?${params.toString()}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching all contracts:', error);
@@ -1138,7 +1138,7 @@ export const fetchAllContracts = async (filters?: { status?: string; search?: st
 
 export const updateContract = async (id: number, data: Partial<Contract>): Promise<Contract> => {
     try {
-        const response = await api.patch(`/contracts/${id}/`, data);
+        const response = await api.patch(`contracts/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating contract:', error);
@@ -1148,7 +1148,7 @@ export const updateContract = async (id: number, data: Partial<Contract>): Promi
 
 export const deleteContract = async (id: number): Promise<void> => {
     try {
-        await api.delete(`/contracts/${id}/`);
+        await api.delete(`contracts/${id}/`);
     } catch (error) {
         console.error('Error deleting contract:', error);
         throw error;
@@ -1157,7 +1157,7 @@ export const deleteContract = async (id: number): Promise<void> => {
 
 export const fetchVehicleContracts = async (vehicleId: number): Promise<Contract[]> => {
     try {
-        const response = await api.get(`/contracts/?vehicle=${vehicleId}`);
+        const response = await api.get(`contracts/?vehicle=${vehicleId}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching vehicle contracts:', error);
@@ -1167,7 +1167,7 @@ export const fetchVehicleContracts = async (vehicleId: number): Promise<Contract
 
 export const fetchVehicleDamageReports = async (vehicleId: number): Promise<DamageReport[]> => {
     try {
-        const response = await api.get(`/vehicles/${vehicleId}/damage-reports/`);
+        const response = await api.get(`vehicles/${vehicleId}/damage-reports/`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching damage reports:', error);
@@ -1177,7 +1177,7 @@ export const fetchVehicleDamageReports = async (vehicleId: number): Promise<Dama
 
 export const fetchVehicleMaintenance = async (vehicleId: number): Promise<MaintenanceRecord[]> => {
     try {
-        const response = await api.get(`/maintenance/?vehicle_id=${vehicleId}`);
+        const response = await api.get(`maintenance/?vehicle_id=${vehicleId}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching maintenance records:', error);
@@ -1187,7 +1187,7 @@ export const fetchVehicleMaintenance = async (vehicleId: number): Promise<Mainte
 
 export const createMaintenanceRecord = async (data: any): Promise<MaintenanceRecord> => {
     try {
-        const response = await api.post('/maintenance/', data);
+        const response = await api.post('maintenance/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating maintenance record:', error);
@@ -1207,7 +1207,7 @@ export const fetchMaintenanceRecords = async (filters?: {
         if (filters?.maintenance_type) params.append('maintenance_type', filters.maintenance_type);
         if (filters?.search) params.append('search', filters.search);
 
-        const response = await api.get(`/maintenance/?${params.toString()}`);
+        const response = await api.get(`maintenance/?${params.toString()}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching maintenance records:', error);
@@ -1218,7 +1218,7 @@ export const fetchMaintenanceRecords = async (filters?: {
 
 export const fetchVehicleExpenses = async (vehicleId: number): Promise<VehicleExpenseItem[]> => {
     try {
-        const response = await api.get(`/vehicle-expenses/?vehicle_id=${vehicleId}`);
+        const response = await api.get(`expenses/vehicle-expenses/?vehicle_id=${vehicleId}`);
         return response.data.results || response.data;
     } catch (error) {
         throw error;
@@ -1238,7 +1238,7 @@ export interface CreateVehicleExpensePayload {
 
 export const createVehicleExpense = async (data: CreateVehicleExpensePayload): Promise<VehicleExpenseItem> => {
     try {
-        const response = await api.post('/vehicle-expenses/', data);
+        const response = await api.post('expenses/vehicle-expenses/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating vehicle expense:', error);
@@ -1248,7 +1248,7 @@ export const createVehicleExpense = async (data: CreateVehicleExpensePayload): P
 
 export const fetchVehicleExpense = async (id: string): Promise<VehicleExpenseItem> => {
     try {
-        const response = await api.get(`/vehicle-expenses/${id}/`);
+        const response = await api.get(`expenses/vehicle-expenses/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle expense:', error);
@@ -1258,7 +1258,7 @@ export const fetchVehicleExpense = async (id: string): Promise<VehicleExpenseIte
 
 export const updateVehicleExpense = async (id: string, data: Partial<CreateVehicleExpensePayload>): Promise<VehicleExpenseItem> => {
     try {
-        const response = await api.patch(`/vehicle-expenses/${id}/`, data);
+        const response = await api.patch(`expenses/vehicle-expenses/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating vehicle expense:', error);
@@ -1268,7 +1268,7 @@ export const updateVehicleExpense = async (id: string, data: Partial<CreateVehic
 
 export const deleteVehicleExpense = async (id: string): Promise<void> => {
     try {
-        await api.delete(`/vehicle-expenses/${id}/`);
+        await api.delete(`expenses/vehicle-expenses/${id}/`);
     } catch (error) {
         console.error('Error deleting vehicle expense:', error);
         throw error;
@@ -1288,7 +1288,7 @@ export const fetchExpenseItems = async (category?: string): Promise<ExpenseItem[
         const params = new URLSearchParams();
         if (category) params.append('category', category);
 
-        const response = await api.get(`/expense-items/?${params.toString()}`);
+        const response = await api.get(`expenses/expense-items/?${params.toString()}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching expense items:', error);
@@ -1298,7 +1298,7 @@ export const fetchExpenseItems = async (category?: string): Promise<ExpenseItem[
 
 export const fetchVehiclePayments = async (vehicleId: number): Promise<Payment[]> => {
     try {
-        const response = await api.get(`/payments/?vehicle=${vehicleId}`);
+        const response = await api.get(`payments/?vehicle=${vehicleId}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching vehicle payments:', error);
@@ -1335,7 +1335,7 @@ export interface VehicleExpenseData {
 
 export const fetchVehicleIncomeTotals = async (id: number): Promise<VehicleIncomeData> => {
     try {
-        const response = await api.get(`/vehicles/${id}/income_totals/`);
+        const response = await api.get(`vehicles/${id}/income_totals/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle income totals:', error);
@@ -1345,7 +1345,7 @@ export const fetchVehicleIncomeTotals = async (id: number): Promise<VehicleIncom
 
 export const fetchVehicleExpenseTotals = async (id: number): Promise<VehicleExpenseData> => {
     try {
-        const response = await api.get(`/vehicles/${id}/expense_totals/`);
+        const response = await api.get(`vehicles/${id}/expense_totals/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle expense totals:', error);
@@ -1357,7 +1357,7 @@ export const fetchVehicleExpenseTotals = async (id: number): Promise<VehicleExpe
 
 export const fetchCombinedExpenses = async () => {
     try {
-        const response = await api.get('/vehicle-expenses/');
+        const response = await api.get('expenses/vehicle-expenses/');
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching combined expenses:', error);
@@ -1367,7 +1367,7 @@ export const fetchCombinedExpenses = async () => {
 
 export const fetchExpenseStatistics = async (): Promise<ExpenseStatistics> => {
     try {
-        const response = await api.get('/expense-statistics/');
+        const response = await api.get('expenses/expense-statistics/');
         return response.data;
     } catch (error) {
         console.error('Error fetching expense statistics:', error);
@@ -1420,7 +1420,7 @@ export interface LoginResponse {
 
 export const login = async (data: any): Promise<LoginResponse> => {
     try {
-        const response = await api.post('/users/auth/login/', data);
+        const response = await api.post('users/auth/login/', data);
         return response.data;
     } catch (error) {
         console.error('Error logging in:', error);
@@ -1430,7 +1430,7 @@ export const login = async (data: any): Promise<LoginResponse> => {
 
 export const logout = async (): Promise<void> => {
     try {
-        await api.post('/users/auth/logout/');
+        await api.post('users/auth/logout/');
     } catch (error) {
         console.error('Error logging out:', error);
         throw error;
@@ -1456,7 +1456,7 @@ export interface Equipment {
 
 export const fetchEquipmentList = async (): Promise<Equipment[]> => {
     try {
-        const response = await api.get('/inventory/equipment/');
+        const response = await api.get('inventory/equipment/');
         return response.data;
     } catch (error) {
         console.error('Error fetching equipment list:', error);
@@ -1466,7 +1466,7 @@ export const fetchEquipmentList = async (): Promise<Equipment[]> => {
 
 export const fetchEquipment = async (id: number): Promise<Equipment> => {
     try {
-        const response = await api.get(`/inventory/equipment/${id}/`);
+        const response = await api.get(`inventory/equipment/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching equipment:', error);
@@ -1476,7 +1476,7 @@ export const fetchEquipment = async (id: number): Promise<Equipment> => {
 
 export const createEquipment = async (data: Partial<Equipment>): Promise<Equipment> => {
     try {
-        const response = await api.post('/inventory/equipment/', data);
+        const response = await api.post('inventory/equipment/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating equipment:', error);
@@ -1486,7 +1486,7 @@ export const createEquipment = async (data: Partial<Equipment>): Promise<Equipme
 
 export const updateEquipment = async (id: number, data: Partial<Equipment>): Promise<Equipment> => {
     try {
-        const response = await api.patch(`/inventory/equipment/${id}/`, data);
+        const response = await api.patch(`inventory/equipment/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating equipment:', error);
@@ -1496,7 +1496,7 @@ export const updateEquipment = async (id: number, data: Partial<Equipment>): Pro
 
 export const deleteEquipment = async (id: number): Promise<void> => {
     try {
-        await api.delete(`/inventory/equipment/${id}/`);
+        await api.delete(`inventory/equipment/${id}/`);
     } catch (error) {
         console.error('Error deleting equipment:', error);
         throw error;
@@ -1546,7 +1546,7 @@ export const fetchJobCards = async (
             if (filters.search) params.search = filters.search;
         }
 
-        const response = await api.get('/job-cards/', { params });
+        const response = await api.get('job-cards/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching job cards:', error);
@@ -1556,7 +1556,7 @@ export const fetchJobCards = async (
 
 export const fetchJobCard = async (id: number): Promise<JobCard> => {
     try {
-        const response = await api.get(`/job-cards/${id}/`);
+        const response = await api.get(`job-cards/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching job card:', error);
@@ -1566,7 +1566,7 @@ export const fetchJobCard = async (id: number): Promise<JobCard> => {
 
 export const createJobCard = async (data: any): Promise<JobCard> => {
     try {
-        const response = await api.post('/job-cards/', data);
+        const response = await api.post('job-cards/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating job card:', error);
@@ -1576,7 +1576,7 @@ export const createJobCard = async (data: any): Promise<JobCard> => {
 
 export const updateJobCard = async (id: number, data: any): Promise<JobCard> => {
     try {
-        const response = await api.patch(`/job-cards/${id}/`, data);
+        const response = await api.patch(`job-cards/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating job card:', error);
@@ -1586,7 +1586,7 @@ export const updateJobCard = async (id: number, data: any): Promise<JobCard> => 
 
 export const deleteJobCard = async (id: number): Promise<void> => {
     try {
-        await api.delete(`/job-cards/${id}/`);
+        await api.delete(`job-cards/${id}/`);
     } catch (error) {
         console.error('Error deleting job card:', error);
         throw error;
@@ -1595,7 +1595,7 @@ export const deleteJobCard = async (id: number): Promise<void> => {
 
 export const fetchJobCardStatistics = async (): Promise<{ active_jobs: number; pending_approval: number }> => {
     try {
-        const response = await api.get('/job-cards/statistics/');
+        const response = await api.get('job-cards/statistics/');
         return response.data;
     } catch (error) {
         console.error('Error fetching job card stats:', error);
@@ -1658,7 +1658,7 @@ export const fetchSupplierPerformanceReport = async (dateRange?: ReportDateRange
 
 export const exportReportToPDF = async (reportData: any): Promise<Blob> => {
     try {
-        const response = await api.post('/inventory/reports/export/pdf/', reportData, {
+        const response = await api.post('inventory/reports/export/pdf/', reportData, {
             responseType: 'blob',
         });
         return response.data;
@@ -1670,7 +1670,7 @@ export const exportReportToPDF = async (reportData: any): Promise<Blob> => {
 
 export const exportReportToExcel = async (reportData: any): Promise<Blob> => {
     try {
-        const response = await api.post('/inventory/reports/export/excel/', reportData, {
+        const response = await api.post('inventory/reports/export/excel/', reportData, {
             responseType: 'blob',
         });
         return response.data;
@@ -1735,7 +1735,7 @@ export interface VehicleStatusUpdate {
 // Get overview of all vehicle statuses
 export const fetchVehicleStatusOverview = async (): Promise<VehicleStatusOverview> => {
     try {
-        const response = await api.get('/vehicles/status_overview/');
+        const response = await api.get('vehicles/status_overview/');
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle status overview:', error);
@@ -1749,7 +1749,7 @@ export const updateVehicleStatus = async (vehicleId: number, data: VehicleStatus
     vehicle: Vehicle;
 }> => {
     try {
-        const response = await api.post(`/vehicles/${vehicleId}/update_status/`, data);
+        const response = await api.post(`vehicles/${vehicleId}/update_status/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating vehicle status:', error);
@@ -1765,7 +1765,7 @@ export const fetchVehicleStatusHistory = async (vehicleId: number, days: number 
     period_days: number;
 }> => {
     try {
-        const response = await api.get(`/vehicles/${vehicleId}/status_history/?days=${days}`);
+        const response = await api.get(`vehicles/${vehicleId}/status_history/?days=${days}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicle status history:', error);
@@ -1794,7 +1794,7 @@ export const fetchVehiclesByStatus = async (status: string): Promise<{
     }>;
 }> => {
     try {
-        const response = await api.get(`/vehicles/by_status/?status=${status}`);
+        const response = await api.get(`vehicles/by_status/?status=${status}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching vehicles by status:', error);
@@ -1805,7 +1805,7 @@ export const fetchVehiclesByStatus = async (status: string): Promise<{
 // Get fleet utilization statistics
 export const fetchUtilizationStats = async (days: number = 30): Promise<UtilizationStats> => {
     try {
-        const response = await api.get(`/vehicles/utilization_stats/?days=${days}`);
+        const response = await api.get(`vehicles/utilization_stats/?days=${days}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching utilization stats:', error);
@@ -1819,7 +1819,7 @@ export const syncVehicleStatuses = async (): Promise<{
     updated_count: number;
 }> => {
     try {
-        const response = await api.post('/vehicles/sync_statuses/');
+        const response = await api.post('vehicles/sync_statuses/');
         return response.data;
     } catch (error) {
         console.error('Error syncing vehicle statuses:', error);
@@ -1872,7 +1872,7 @@ export const fetchUsers = async (page = 1, pageSize = 20, search?: string): Prom
         };
         if (search) params.search = search;
 
-        const response = await api.get('/users/', { params });
+        const response = await api.get('users/', { params });
         return response.data;
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -1882,7 +1882,7 @@ export const fetchUsers = async (page = 1, pageSize = 20, search?: string): Prom
 
 export const fetchUser = async (id: string): Promise<User> => {
     try {
-        const response = await api.get(`/users/${id}/`);
+        const response = await api.get(`users/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching user:', error);
@@ -1892,7 +1892,7 @@ export const fetchUser = async (id: string): Promise<User> => {
 
 export const createUser = async (data: Partial<User>): Promise<User> => {
     try {
-        const response = await api.post('/users/', data);
+        const response = await api.post('users/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating user:', error);
@@ -1902,7 +1902,7 @@ export const createUser = async (data: Partial<User>): Promise<User> => {
 
 export const updateUser = async (id: string, data: Partial<User>): Promise<User> => {
     try {
-        const response = await api.patch(`/users/${id}/`, data);
+        const response = await api.patch(`users/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating user:', error);
@@ -1912,7 +1912,7 @@ export const updateUser = async (id: string, data: Partial<User>): Promise<User>
 
 export const deleteUser = async (id: string): Promise<void> => {
     try {
-        await api.delete(`/users/${id}/`);
+        await api.delete(`users/${id}/`);
     } catch (error) {
         console.error('Error deleting user:', error);
         throw error;
@@ -1927,7 +1927,7 @@ export const fetchClientUsers = async (page = 1, pageSize = 20): Promise<ApiResp
             page,
             page_size: pageSize
         };
-        const response = await api.get('/loyalty/clients/', { params });
+        const response = await api.get('loyalty/clients/', { params });
         const results = response.data.results || response.data;
         const count = response.data.count || (Array.isArray(results) ? results.length : 0);
 
@@ -1968,7 +1968,7 @@ export const fetchClientUsers = async (page = 1, pageSize = 20): Promise<ApiResp
 
 export const fetchClientUser = async (id: string): Promise<ClientUser> => {
     try {
-        const response = await api.get(`/loyalty/clients/${id}/`);
+        const response = await api.get(`loyalty/clients/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching client user:', error);
@@ -1979,7 +1979,7 @@ export const fetchClientUser = async (id: string): Promise<ClientUser> => {
 export const updateClientUser = async (id: string, data: Partial<ClientUser>): Promise<ClientUser> => {
     try {
         // Update via users endpoint since loyalty/clients is read-only
-        const response = await api.patch(`/users/${id}/`, data);
+        const response = await api.patch(`users/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating client user:', error);
@@ -1992,8 +1992,8 @@ export const fetchUserDashboardStats = async (): Promise<UserDashboardStats> => 
     try {
         // Since /users/dashboard/stats/ doesn't exist, we'll calculate from available data
         const [users, loyaltyStats] = await Promise.all([
-            api.get('/users/?role=CLIENT'),
-            api.get('/loyalty/stats/')
+            api.get('users/?role=CLIENT'),
+            api.get('loyalty/stats/')
         ]);
 
         const clients = users.data.results || users.data;
@@ -2028,7 +2028,7 @@ export const fetchUserDashboardStats = async (): Promise<UserDashboardStats> => 
 export const fetchLoyaltyPoints = async (): Promise<LoyaltyPoints[]> => {
     try {
         // Get loyalty data from clients endpoint (simpler approach)
-        const response = await api.get('/loyalty/clients/');
+        const response = await api.get('loyalty/clients/');
         const clients = response.data.results || response.data;
 
         // Transform client data to LoyaltyPoints format using available data
@@ -2090,7 +2090,7 @@ const getTierBenefits = (tier: string): string[] => {
 
 export const fetchClientLoyaltyPoints = async (clientId: string): Promise<LoyaltyPoints> => {
     try {
-        const response = await api.get(`/loyalty/clients/${clientId}/`);
+        const response = await api.get(`loyalty/clients/${clientId}/`);
         const client = response.data;
 
         return {
@@ -2139,7 +2139,7 @@ export const fetchLoyaltyTransactions = async (filters?: {
         if (filters?.type) params.append('type', filters.type);
         if (filters?.limit) params.append('limit', filters.limit.toString());
 
-        const response = await api.get(`/loyalty/transactions/?${params.toString()}`);
+        const response = await api.get(`loyalty/transactions/?${params.toString()}`);
         const transactions = response.data.results || response.data;
 
         // Transform backend data to match frontend interface
@@ -2165,7 +2165,7 @@ export const fetchLoyaltyTransactions = async (filters?: {
 
 export const createLoyaltyTransaction = async (data: Omit<LoyaltyTransaction, 'id' | 'createdAt' | 'balanceAfter'>): Promise<LoyaltyTransaction> => {
     try {
-        const response = await api.post('/loyalty/transactions/', data);
+        const response = await api.post('loyalty/transactions/', data);
         return response.data;
     } catch (error) {
         console.error('Error creating loyalty transaction:', error);
@@ -2181,7 +2181,7 @@ export const awardLoyaltyPoints = async (data: {
     reason?: string;
 }): Promise<LoyaltyTransaction> => {
     try {
-        const response = await api.post('/loyalty/transactions/award_points/', data);
+        const response = await api.post('loyalty/transactions/award_points/', data);
         return response.data;
     } catch (error) {
         console.error('Error awarding loyalty points:', error);
@@ -2197,7 +2197,7 @@ export const redeemLoyaltyPoints = async (data: {
     metadata?: any;
 }): Promise<LoyaltyTransaction> => {
     try {
-        const response = await api.post('/loyalty/transactions/redeem_points/', data);
+        const response = await api.post('loyalty/transactions/redeem_points/', data);
         return response.data;
     } catch (error) {
         console.error('Error redeeming loyalty points:', error);
@@ -2211,7 +2211,7 @@ export const renewLoyaltyPoints = async (data: {
     reason?: string;
 }): Promise<LoyaltyTransaction> => {
     try {
-        const response = await api.post('/loyalty/transactions/renew_points/', data);
+        const response = await api.post('loyalty/transactions/renew_points/', data);
         return response.data;
     } catch (error) {
         console.error('Error renewing loyalty points:', error);
@@ -2222,7 +2222,7 @@ export const renewLoyaltyPoints = async (data: {
 // Loyalty Rewards API
 export const fetchLoyaltyRewards = async (): Promise<any[]> => {
     try {
-        const response = await api.get('/loyalty/rewards/');
+        const response = await api.get('loyalty/rewards/');
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching loyalty rewards:', error);
@@ -2237,7 +2237,7 @@ export const checkRewardRedemption = async (rewardId: string, clientId: string):
     reward_cost: number;
 }> => {
     try {
-        const response = await api.get(`/loyalty/rewards/${rewardId}/can_redeem/?client_id=${clientId}`);
+        const response = await api.get(`loyalty/rewards/${rewardId}/can_redeem/?client_id=${clientId}`);
         return response.data;
     } catch (error) {
         console.error('Error checking reward redemption:', error);
@@ -2249,14 +2249,14 @@ export const checkRewardRedemption = async (rewardId: string, clientId: string):
 export const fetchClientLoyaltySummary = async (clientId: string): Promise<any> => {
     try {
         // Try the summary endpoint first
-        const response = await api.get(`/loyalty/clients/${clientId}/summary/`);
+        const response = await api.get(`loyalty/clients/${clientId}/summary/`);
         return response.data;
     } catch (error: any) {
         console.warn(`Summary endpoint failed for client ${clientId}:`, error?.response?.status);
 
         // Fallback: get basic client data and calculate summary
         try {
-            const clientResponse = await api.get(`/loyalty/clients/${clientId}/`);
+            const clientResponse = await api.get(`loyalty/clients/${clientId}/`);
             const client = clientResponse.data;
 
             // Return a mock summary structure using available data
@@ -2287,7 +2287,7 @@ export const debugClientData = async () => {
         console.log('🔍 Debugging client data...');
 
         // Get all clients first
-        const response = await api.get('/loyalty/clients/');
+        const response = await api.get('loyalty/clients/');
         const clients = response.data.results || response.data;
 
         console.log(`📊 Found ${clients.length} clients`);
@@ -2306,12 +2306,12 @@ export const debugClientData = async () => {
 
             // Try to fetch individual client to test endpoint
             try {
-                const individualResponse = await api.get(`/loyalty/clients/${firstClient.id}/`);
+                const individualResponse = await api.get(`loyalty/clients/${firstClient.id}/`);
                 console.log('✅ Individual client fetch successful');
 
                 // Try summary endpoint
                 try {
-                    const summaryResponse = await api.get(`/loyalty/clients/${firstClient.id}/summary/`);
+                    const summaryResponse = await api.get(`loyalty/clients/${firstClient.id}/summary/`);
                     console.log('✅ Summary endpoint successful:', summaryResponse.data);
                 } catch (summaryError: any) {
                     console.warn('⚠️ Summary endpoint failed:', summaryError?.response?.status, summaryError?.response?.data);
@@ -2324,7 +2324,7 @@ export const debugClientData = async () => {
 
         // Test loyalty stats
         try {
-            const statsResponse = await api.get('/loyalty/stats/');
+            const statsResponse = await api.get('loyalty/stats/');
             console.log('✅ Loyalty stats endpoint successful:', statsResponse.data);
         } catch (statsError: any) {
             console.warn('⚠️ Loyalty stats failed:', statsError?.response?.status);
@@ -2349,7 +2349,7 @@ export const fetchLoanApplications = async (filters?: {
         if (filters?.status) params.append('status', filters.status);
         if (filters?.limit) params.append('limit', filters.limit.toString());
 
-        const response = await api.get(`/loans/applications/?${params.toString()}`);
+        const response = await api.get(`loans/applications/?${params.toString()}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error fetching loan applications:', error);
@@ -2359,7 +2359,7 @@ export const fetchLoanApplications = async (filters?: {
 
 export const fetchLoanApplication = async (id: string): Promise<LoanApplication> => {
     try {
-        const response = await api.get(`/loans/applications/${id}/`);
+        const response = await api.get(`loans/applications/${id}/`);
         return response.data;
     } catch (error) {
         console.error('Error fetching loan application:', error);
@@ -2369,7 +2369,7 @@ export const fetchLoanApplication = async (id: string): Promise<LoanApplication>
 
 export const updateLoanApplication = async (id: string, data: Partial<LoanApplication>): Promise<LoanApplication> => {
     try {
-        const response = await api.patch(`/loans/applications/${id}/`, data);
+        const response = await api.patch(`loans/applications/${id}/`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating loan application:', error);
@@ -2383,7 +2383,7 @@ export const approveLoanApplication = async (id: string, data: {
     notes?: string;
 }): Promise<LoanApplication> => {
     try {
-        const response = await api.post(`/loans/applications/${id}/approve/`, data);
+        const response = await api.post(`loans/applications/${id}/approve/`, data);
         return response.data;
     } catch (error) {
         console.error('Error approving loan application:', error);
@@ -2396,7 +2396,7 @@ export const rejectLoanApplication = async (id: string, data: {
     notes?: string;
 }): Promise<LoanApplication> => {
     try {
-        const response = await api.post(`/loans/applications/${id}/reject/`, data);
+        const response = await api.post(`loans/applications/${id}/reject/`, data);
         return response.data;
     } catch (error) {
         console.error('Error rejecting loan application:', error);
@@ -2407,7 +2407,7 @@ export const rejectLoanApplication = async (id: string, data: {
 // Loan Dashboard Statistics API
 export const fetchLoanDashboardStats = async (): Promise<LoanDashboardStats> => {
     try {
-        const response = await api.get('/loans/dashboard/stats/');
+        const response = await api.get('loans/dashboard/stats/');
         return response.data;
     } catch (error) {
         console.error('Error fetching loan dashboard stats:', error);
@@ -2427,7 +2427,7 @@ export const fetchLoanDashboardStats = async (): Promise<LoanDashboardStats> => 
 //         if (filters?.days) params.append('days', filters.days.toString());
 //         if (filters?.limit) params.append('limit', filters.limit.toString());
 
-//         const response = await api.get(`/users/activity/?${params.toString()}`);
+//         const response = await api.get(`users/activity/?${params.toString()}`);
 //         return response.data.results || response.data;
 //     } catch (error) {
 //         console.error('Error fetching user activity:', error);
@@ -2448,7 +2448,7 @@ export const searchUsers = async (query: string, filters?: {
         if (filters?.status) params.append('status', filters.status);
         if (filters?.limit) params.append('limit', filters.limit.toString());
 
-        const response = await api.get(`/users/search/?${params.toString()}`);
+        const response = await api.get(`users/search/?${params.toString()}`);
         return response.data.results || response.data;
     } catch (error) {
         console.error('Error searching users:', error);

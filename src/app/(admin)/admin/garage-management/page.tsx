@@ -58,8 +58,8 @@ export default function GarageManagementPage() {
           fetchJobCards(),
           fetchEquipmentList()
         ])
-        setJobCards(jobCardsData)
-        setEquipment(equipmentData)
+        setJobCards(jobCardsData.results || [])
+        setEquipment(equipmentData || [])
       } catch (error) {
         console.error('Error loading garage management data:', error)
         setError('Failed to load data. Please try again.')

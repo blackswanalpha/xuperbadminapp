@@ -22,9 +22,7 @@ import {
 } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
-import axios from 'axios'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+import api from '@/lib/axios'
 
 export default function MaintenanceDetailPage() {
     const params = useParams()
@@ -61,30 +59,10 @@ export default function MaintenanceDetailPage() {
     const loadMaintenanceData = async () => {
         try {
             setLoading(true)
-            // Try multiple token keys for compatibility
-            const token = localStorage.getItem('access_token') || 
-                         localStorage.getItem('token') || 
-                         localStorage.getItem('authToken')
-            
-            const response = await axios.get(`${API_BASE_URL}/maintenance/${maintenanceId}/`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            })
+            const response = await api.get(`maintenance/${maintenanceId}/`)
             setMaintenance(response.data)
         } catch (error: any) {
             console.error('Error loading maintenance data:', error)
-            
-            // If unauthorized, try to refresh or redirect
-            if (error?.response?.status === 401) {
-                // Clear potentially invalid tokens
-                localStorage.removeItem('access_token')
-                localStorage.removeItem('token')
-                localStorage.removeItem('authToken')
-                
-                // Redirect to login or show error
-                console.warn('Authentication failed - please log in again')
-            }
         } finally {
             setLoading(false)
         }
@@ -93,10 +71,6 @@ export default function MaintenanceDetailPage() {
     const updateMaintenanceStatus = async (status: string) => {
         try {
             setIsUpdatingStatus(true)
-            const token = localStorage.getItem('access_token') || 
-                         localStorage.getItem('token') || 
-                         localStorage.getItem('authToken')
-            
             const updateData: any = {
                 status: status
             }
@@ -106,30 +80,17 @@ export default function MaintenanceDetailPage() {
                 updateData.completed_date = new Date().toISOString()
             }
 
-            const response = await axios.patch(
-                `${API_BASE_URL}/maintenance/${maintenanceId}/`, 
-                updateData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
+            const response = await api.patch(
+                `maintenance/${maintenanceId}/`,
+                updateData
             )
-            
+
             setMaintenance(response.data)
             setShowStatusDropdown(false)
             setNewStatus('')
-            
+
         } catch (error: any) {
             console.error('Error updating maintenance status:', error)
-            
-            if (error?.response?.status === 401) {
-                localStorage.removeItem('access_token')
-                localStorage.removeItem('token')
-                localStorage.removeItem('authToken')
-                console.warn('Authentication failed - please log in again')
-            }
         } finally {
             setIsUpdatingStatus(false)
         }
@@ -251,13 +212,12 @@ export default function MaintenanceDetailPage() {
                                                 <button
                                                     key={option.value}
                                                     onClick={() => handleStatusChange(option.value)}
-                                                    className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                                                        newStatus === option.value 
-                                                            ? 'border-blue-500 bg-blue-50' 
-                                                            : maintenance.status === option.value 
-                                                                ? 'border-gray-300 bg-gray-50' 
+                                                    className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${newStatus === option.value
+                                                            ? 'border-blue-500 bg-blue-50'
+                                                            : maintenance.status === option.value
+                                                                ? 'border-gray-300 bg-gray-50'
                                                                 : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className="flex-1 text-left">
                                                         <span className={`px-2 py-1 rounded text-xs font-medium ${option.color}`}>
@@ -273,7 +233,7 @@ export default function MaintenanceDetailPage() {
                                                 </button>
                                             ))}
                                         </div>
-                                        
+
                                         {/* Action Buttons */}
                                         {newStatus && newStatus !== maintenance.status && (
                                             <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">

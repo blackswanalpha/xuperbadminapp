@@ -37,7 +37,7 @@ const createClientVehicleColumns = (onDelete: (vehicle: ClientVehicle) => void):
         header: 'Vehicle Information',
         cell: ({ row }) => (
             <div className="flex items-center gap-3">
-                <div 
+                <div
                     className="p-2 rounded-lg"
                     style={{ backgroundColor: `${colors.supervisorPrimary}15` }}
                 >
@@ -81,8 +81,8 @@ const createClientVehicleColumns = (onDelete: (vehicle: ClientVehicle) => void):
             return (
                 <div className="flex flex-col space-y-2">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${isActive
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-gray-50 text-gray-600 border-gray-200'
                         }`}>
                         {isActive ? 'In Service' : 'Completed'}
                     </span>
@@ -99,7 +99,7 @@ const createClientVehicleColumns = (onDelete: (vehicle: ClientVehicle) => void):
         header: 'Service History',
         cell: ({ row }) => (
             <div className="flex flex-col items-center">
-                <div 
+                <div
                     className="flex items-center justify-center w-10 h-10 rounded-full text-white font-bold"
                     style={{ backgroundColor: colors.supervisorPrimary }}
                 >
@@ -146,7 +146,7 @@ const createVehicleColumns = (onDelete: (vehicle: Vehicle) => void): ColumnDef<V
         header: 'Vehicle Details',
         cell: ({ row }) => (
             <div className="flex items-center gap-3">
-                <div 
+                <div
                     className="p-2 rounded-lg"
                     style={{ backgroundColor: `${colors.supervisorPrimary}15` }}
                 >
@@ -253,8 +253,9 @@ export default function GarageVehiclesPage() {
 
                 // Process job cards to extract unique client vehicles
                 const vehicleMap = new Map<string, ClientVehicle>()
+                const jobCardsList = jobCards.results || []
 
-                jobCards.forEach(job => {
+                jobCardsList.forEach(job => {
                     const reg = job.registration_number.toUpperCase()
                     const existing = vehicleMap.get(reg)
 
@@ -316,14 +317,14 @@ export default function GarageVehiclesPage() {
 
         try {
             await deleteVehicle(deleteModal.vehicle.id)
-            
+
             setVehicles(prevVehicles => prevVehicles.filter(v => v.id !== deleteModal.vehicle?.id))
-            
+
             toast({
                 title: "Success",
                 description: "Vehicle deleted successfully",
             })
-            
+
             setDeleteModal({
                 isOpen: false,
                 vehicle: null,
@@ -336,7 +337,7 @@ export default function GarageVehiclesPage() {
                 description: error.response?.data?.detail || "Failed to delete vehicle. Please try again.",
                 variant: "destructive"
             })
-            
+
             setDeleteModal(prev => ({ ...prev, isDeleting: false }))
         }
     }
@@ -367,16 +368,16 @@ export default function GarageVehiclesPage() {
     }
 
     // Filter functions
-    const filteredClientVehicles = data.filter(v => 
-        !searchTerm || 
+    const filteredClientVehicles = data.filter(v =>
+        !searchTerm ||
         v.registration_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.model.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const filteredVehicles = vehicles.filter(v => 
-        !searchTerm || 
+    const filteredVehicles = vehicles.filter(v =>
+        !searchTerm ||
         v.registration_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.model.toLowerCase().includes(searchTerm.toLowerCase())
@@ -392,7 +393,7 @@ export default function GarageVehiclesPage() {
         return !s || s === 'completed' || s === 'cancelled';
     });
 
-    const clientVehicleColumns = createClientVehicleColumns(() => {})
+    const clientVehicleColumns = createClientVehicleColumns(() => { })
     const vehicleColumns = createVehicleColumns(handleDeleteClick)
 
     return (

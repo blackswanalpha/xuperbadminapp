@@ -36,7 +36,8 @@ export const useAuthStore = create<AuthState>()(
 
             login: async (email: string, password: string) => {
                 try {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1031/api/v1'}/users/auth/login/`, {
+                    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://xuperb.spinwish.tech/api/v1').replace(/\/?$/, '');
+                    const response = await fetch(`${baseUrl}/users/auth/login/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -45,7 +46,8 @@ export const useAuthStore = create<AuthState>()(
                     })
 
                     if (!response.ok) {
-                        throw new Error('Login failed')
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || 'Login failed')
                     }
 
                     const data = await response.json()
@@ -70,7 +72,8 @@ export const useAuthStore = create<AuthState>()(
                 const { token } = get()
                 try {
                     if (token) {
-                        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1031/api/v1'}/users/auth/logout/`, {
+                        const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://xuperb.spinwish.tech/api/v1').replace(/\/?$/, '');
+                        await fetch(`${baseUrl}/users/auth/logout/`, {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -82,19 +85,23 @@ export const useAuthStore = create<AuthState>()(
                     console.error('Logout API error:', error)
                 }
 
-                localStorage.removeItem('rememberMeExpiry')
+                if (typeof window !== 'undefined') {
+                    const keysToRemove = [
+                        'rememberMeExpiry',
+                        'token',
+                        'access_token',
+                        'authToken',
+                        'user'
+                    ];
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    // Note: auth-storage is handled by Zustand persist middleware
+                }
+
                 set({
                     user: null,
                     token: null,
                     isAuthenticated: false,
                 })
-
-                // We rely on the component using this to redirect, or we can't easily redirect from here without a router instance.
-                // The original context used router.push('/login').
-                // With zustand, it's better to handle redirection in the UI or use a service navigation helper. 
-                // For now, consumers will handle redirection if they observe isAuthenticated becoming false.
-                // OR we can just simple window.location.href assignment if we really want to force it, but that's a full reload.
-                // Let's stick to state change and let the ProtectedRoute component handle the redirect.
             },
         }),
         {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://xuperb.spinwish.tech/api/v1',
+    baseURL: (process.env.NEXT_PUBLIC_API_URL || 'https://xuperb.spinwish.tech/api/v1').replace(/\/?$/, '/'),
     headers: {
         'Content-Type': 'application/json',
     },
@@ -10,19 +10,41 @@ const api = axios.create({
 // Add a request interceptor to attach the auth token if available
 api.interceptors.request.use(
     (config) => {
-        // Try multiple token keys for compatibility
-        let token = typeof window !== 'undefined' ?
-            localStorage.getItem('access_token') ||
-            localStorage.getItem('token') ||
-            localStorage.getItem('authToken') : null;
+        let token: string | null = null;
 
-        // Note: For production, tokens should be obtained through proper login flow
-        // The admin app will need to authenticate with the backend first
+        if (typeof window !== 'undefined') {
+            // 1. Support Zustand auth-storage (Highest Priority)
+            const authStorage = localStorage.getItem('auth-storage');
+            if (authStorage) {
+                try {
+                    const parsed = JSON.parse(authStorage);
+                    token = parsed.state?.token;
+                    if (token) {
+                        console.log('[Axios] Using token from auth-storage');
+                    }
+                } catch (e) {
+                    console.error('[Axios] Error parsing auth-storage:', e);
+                }
+            }
+
+            // 2. Fallback to legacy token keys for compatibility
+            if (!token) {
+                token = localStorage.getItem('access_token') ||
+                    localStorage.getItem('token') ||
+                    localStorage.getItem('authToken');
+                if (token) {
+                    console.log('[Axios] Using legacy fallback token');
+                }
+            }
+        }
 
         // Don't attach token for login/register endpoints
-        if (token && !config.url?.includes('/auth/login') && !config.url?.includes('/auth/register')) {
-            config.headers.Authorization = `Bearer ${token}`;
+        const isAuthRequest = config.url?.includes('/auth/login') || config.url?.includes('/auth/register');
+
+        if (token && !isAuthRequest) {
+            config.headers.Authorization = `Bearer ${token.trim()}`;
         }
+
         return config;
     },
     (error) => {
@@ -36,17 +58,24 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             // Handle unauthorized access - clear auth and redirect to login
+            console.error('[Axios] Unauthorized access (401). Clearing state.');
+
             if (typeof window !== 'undefined') {
+                // Clear all possible auth data
+                const keysToRemove = [
+                    'auth-storage',
+                    'token',
+                    'access_token',
+                    'authToken',
+                    'user',
+                    'rememberMeExpiry'
+                ];
+
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
                 // Don't redirect if already on login page
                 if (!window.location.pathname.includes('/login')) {
-                    // Clear all auth data
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('rememberMeExpiry');
-                    // Redirect to login
-                    window.location.href = '/login';
+                    window.location.href = '/login?reason=session_expired';
                 }
             }
         }

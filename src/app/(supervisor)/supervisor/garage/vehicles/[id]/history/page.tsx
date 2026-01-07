@@ -133,7 +133,7 @@ export default function VehicleHistoryPage() {
         }
 
         loadVehicleHistory()
-    }, [registration, toast])
+    }, [id, toast])
 
     const calculateMonthlyCosts = (jobCards: JobCard[]) => {
         const monthlyData: { [key: string]: number } = {}
@@ -211,7 +211,7 @@ export default function VehicleHistoryPage() {
                     <div className="text-center">
                         <FileText size={48} className="mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900">No Service History</h3>
-                        <p className="text-gray-500">No job cards found for vehicle {registration}</p>
+                        <p className="text-gray-500">No job cards found for vehicle {id}</p>
                         <Link href="/supervisor/garage/vehicles" className="mt-4 inline-block">
                             <Button variant="outline">Back to Vehicles</Button>
                         </Link>
