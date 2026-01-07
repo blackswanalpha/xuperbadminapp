@@ -67,10 +67,10 @@ export default function QuickManagementPage() {
           fetchFinancialAnalysis(),
           fetchRecentActivities()
         ])
-        setInvoices(invoicesData)
-        setExpenses(expensesData)
+        setInvoices(invoicesData.invoices || [])
+        setExpenses(expensesData || [])
         setFinancialAnalysis(analysisData)
-        setRecentActivities(activitiesData.activities)
+        setRecentActivities(activitiesData.activities || [])
       } catch (error) {
         console.error('Failed to load quick management data', error)
       } finally {
@@ -80,13 +80,16 @@ export default function QuickManagementPage() {
     loadData()
   }, [])
 
-  // Calculate stats
-  const totalInvoices = invoices.length
-  const totalExpenses = financialAnalysis?.total_expenses || expenses.reduce((sum, exp) => sum + exp.amount, 0)
-  const totalRevenue = financialAnalysis?.total_revenue || invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  // Calculate stats with safety checks
+  const invoicesList = Array.isArray(invoices) ? invoices : []
+  const expensesList = Array.isArray(expenses) ? expenses : []
+
+  const totalInvoices = invoicesList.length
+  const totalExpenses = financialAnalysis?.total_expenses || expensesList.reduce((sum, exp) => sum + (exp.amount || 0), 0)
+  const totalRevenue = financialAnalysis?.total_revenue || invoicesList.reduce((sum, inv) => sum + (inv.amount || 0), 0)
   const netRevenue = financialAnalysis?.net_profit || (totalRevenue - totalExpenses)
-  const pendingInvoices = invoices.filter((inv) => inv.status === 'PENDING').length
-  const pendingExpenses = expenses.filter((exp) => exp.status.toLowerCase() === 'pending').length
+  const pendingInvoices = invoicesList.filter((inv) => inv.status === 'PENDING').length
+  const pendingExpenses = expensesList.filter((exp) => exp.status.toLowerCase() === 'pending').length
   const pendingItems = pendingInvoices + pendingExpenses
 
   const tabs = [
@@ -99,7 +102,7 @@ export default function QuickManagementPage() {
   const formatCurrency = (amount: number) => `KSh ${amount.toLocaleString()}`
 
   const handleDeleteInvoice = (id: string) => {
-    const invoice = invoices.find((inv) => inv.id === id)
+    const invoice = invoicesList.find((inv) => inv.id === id)
     if (!invoice) return
 
     setDeleteModal({
@@ -116,7 +119,7 @@ export default function QuickManagementPage() {
   }
 
   const handleDeleteExpense = (id: string) => {
-    const expense = expenses.find((exp) => exp.id === id)
+    const expense = expensesList.find((exp) => exp.id === id)
     if (!expense) return
 
     setDeleteModal({
@@ -278,15 +281,15 @@ export default function QuickManagementPage() {
   }
 
   const renderAnalysisTab = () => {
-    const totalPaidInvoices = invoices.filter((inv) => inv.status === 'PAID').length
-    const totalApprovedExpenses = expenses.filter((exp) => exp.status.toLowerCase() === 'approved').length
-    const avgInvoiceValue = totalRevenue / totalInvoices
-    const profitMargin = ((netRevenue / totalRevenue) * 100).toFixed(1)
+    const totalPaidInvoices = invoicesList.filter((inv) => inv.status === 'PAID').length
+    const totalApprovedExpenses = expensesList.filter((exp) => exp.status.toLowerCase() === 'approved').length
+    const avgInvoiceValue = totalInvoices > 0 ? (totalRevenue / totalInvoices) : 0
+    const profitMargin = totalRevenue > 0 ? ((netRevenue / totalRevenue) * 100).toFixed(1) : '0.0'
 
     const expensesByCategory = financialAnalysis?.expense_breakdown.reduce((acc, item) => {
       acc[item.category] = item.amount
       return acc
-    }, {} as Record<string, number>) || expenses.reduce((acc, exp) => {
+    }, {} as Record<string, number>) || expensesList.reduce((acc, exp) => {
       acc[exp.category] = (acc[exp.category] || 0) + exp.amount
       return acc
     }, {} as Record<string, number>)
@@ -475,7 +478,7 @@ export default function QuickManagementPage() {
   }
 
   const renderExpensesTab = () => {
-    const filteredExpenses = expenses.filter(
+    const filteredExpenses = expensesList.filter(
       (expense) =>
         expense.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (expense.description && expense.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -648,7 +651,7 @@ export default function QuickManagementPage() {
   }
 
   const renderInvoicesTab = () => {
-    const filteredInvoices = invoices.filter(
+    const filteredInvoices = invoicesList.filter(
       (invoice) =>
         invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (invoice.client_name && invoice.client_name.toLowerCase().includes(searchQuery.toLowerCase()))

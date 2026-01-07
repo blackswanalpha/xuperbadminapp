@@ -530,7 +530,7 @@ export interface FinancialAnalysis {
 
 // Quick Management API Functions
 
-export const fetchInvoices = async (filters?: { search?: string, status?: string }, page = 1, pageSize = 1000): Promise<Invoice[]> => {
+export const fetchInvoices = async (filters?: { search?: string, status?: string }, page = 1, pageSize = 1000): Promise<{ invoices: Invoice[], count: number }> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('page_size', pageSize.toString());
@@ -538,13 +538,28 @@ export const fetchInvoices = async (filters?: { search?: string, status?: string
     if (filters?.search) params.append('search', filters.search);
     if (filters?.status) params.append('status', filters.status);
 
-    const response = await api.get<Invoice[]>(`/invoices/?${params.toString()}`);
-    return response.data;
+    const response = await api.get<any>(`/invoices/?${params.toString()}`);
+
+    if (response.data.results) {
+        return {
+            invoices: response.data.results,
+            count: response.data.count || 0
+        };
+    }
+
+    const invoices = Array.isArray(response.data) ? response.data : [];
+    return {
+        invoices,
+        count: invoices.length
+    };
 };
 
 export const fetchAllExpenses = async (): Promise<Expense[]> => {
-    const response = await api.get<any[]>('/expenses/all-expenses/');
-    return response.data.map(item => ({
+    const response = await api.get<any>('/expenses/all-expenses/');
+    const data = response.data.results || response.data;
+    const items = Array.isArray(data) ? data : [];
+
+    return items.map((item: any) => ({
         id: item.id,
         type: item.type,
         category: item.category,
