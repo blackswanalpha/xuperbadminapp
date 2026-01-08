@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, CheckCircle, Clock, AlertCircle, Plus, Search, Filter, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileText, CheckCircle, Clock, AlertCircle, Plus, Search, Filter, Edit, Trash2, Eye, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import DashboardCard from '@/components/shared/dashboard-card'
 import StatCard from '@/components/shared/stat-card'
 import { colors } from '@/lib/theme/colors'
 import { fetchAllContracts, deleteContract, Contract, fetchVehicles } from '@/lib/api'
+import api from '@/lib/axios'
+import { downloadFileFromBlob } from '@/lib/download'
 
 export default function ContractManagementPage() {
   const router = useRouter()
@@ -124,6 +126,19 @@ export default function ContractManagementPage() {
         console.error('Error deleting contract:', error)
         alert('Failed to delete contract')
       }
+    }
+  }
+
+  const handleDownloadContract = async (contractId: number, contractNumber: string) => {
+    try {
+      const response = await api.get(`/contracts/${contractId}/pdf/`, {
+        responseType: 'blob'
+      })
+      
+      downloadFileFromBlob(response.data, `contract_${contractNumber}.pdf`)
+    } catch (error) {
+      console.error('Error downloading contract:', error)
+      alert('Failed to download contract PDF')
     }
   }
 
@@ -311,6 +326,13 @@ export default function ContractManagementPage() {
                               title="View Details"
                             >
                               <Eye size={16} style={{ color: colors.adminPrimary }} />
+                            </button>
+                            <button
+                              onClick={() => handleDownloadContract(contract.id, contract.contract_number)}
+                              className="p-2 rounded-lg hover:bg-green-50 transition-colors"
+                              title="Download PDF"
+                            >
+                              <Download size={16} style={{ color: colors.adminSuccess }} />
                             </button>
                             <button
                               onClick={() => handleEditContract(contract.id)}

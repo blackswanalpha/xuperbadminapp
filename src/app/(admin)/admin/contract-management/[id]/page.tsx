@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Edit, Trash2, FileText, Calendar, DollarSign, User, Car, Phone, Mail, MapPin } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, FileText, Calendar, DollarSign, User, Car, Phone, Mail, MapPin, Download } from 'lucide-react'
 import { useRouter, useParams } from 'next/navigation'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
 import { fetchVehicle, Contract, deleteContract, fetchVehicles, fetchUsers } from '@/lib/api'
 import api from '@/lib/axios'
+import { downloadFileFromBlob } from '@/lib/download'
 
 export default function ContractDetailPage() {
   const router = useRouter()
@@ -77,6 +78,32 @@ export default function ContractDetailPage() {
         console.error('Error deleting contract:', error)
         alert('Failed to delete contract')
       }
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    try {
+      const response = await api.get(`/contracts/${contractId}/pdf/`, {
+        responseType: 'blob'
+      })
+      
+      downloadFileFromBlob(response.data, `contract_${contract?.contract_number}.pdf`)
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      alert('Failed to download contract PDF')
+    }
+  }
+
+  const handleDownloadReceipt = async () => {
+    try {
+      const response = await api.get(`/contracts/${contractId}/receipt/`, {
+        responseType: 'blob'
+      })
+      
+      downloadFileFromBlob(response.data, `receipt_${contract?.contract_number}.pdf`)
+    } catch (error) {
+      console.error('Error downloading receipt:', error)
+      alert('Failed to download receipt PDF')
     }
   }
 
@@ -159,6 +186,13 @@ export default function ContractDetailPage() {
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+            >
+              <Download size={18} />
+              Download PDF
+            </button>
             <button
               onClick={handleEdit}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
@@ -622,11 +656,20 @@ export default function ContractDetailPage() {
       {activeTab === 'payment-record' && (
         <DashboardCard title="Payment Record" subtitle="Record new payments for this contract">
           <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-semibold text-green-900 mb-2">Outstanding Balance</h4>
-              <p className="text-2xl font-bold text-green-800">
-                KSh {parseFloat(contract.balance_due || '0').toLocaleString()}
-              </p>
+            <div className="flex justify-between items-center">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex-1">
+                <h4 className="font-semibold text-green-900 mb-2">Outstanding Balance</h4>
+                <p className="text-2xl font-bold text-green-800">
+                  KSh {parseFloat(contract.balance_due || '0').toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={handleDownloadReceipt}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors ml-4"
+              >
+                <Download size={18} />
+                Download Receipt
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

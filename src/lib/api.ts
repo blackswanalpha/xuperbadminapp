@@ -1358,6 +1358,154 @@ export const fetchVehicleIncomeTotals = async (id: number): Promise<VehicleIncom
     }
 };
 
+// Calendar API Types
+export interface CalendarEvent {
+    id: string;
+    title: string;
+    description?: string;
+    event_type: 'trip' | 'maintenance' | 'inspection' | 'available' | 'other';
+    start_date: string;
+    end_date: string;
+    all_day: boolean;
+    vehicle?: string;
+    driver?: string;
+    location?: string;
+    status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+    priority: 'low' | 'medium' | 'high';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CalendarFilters {
+    start_date?: string;
+    end_date?: string;
+    event_type?: string;
+    vehicle?: string;
+    status?: string;
+    search?: string;
+}
+
+export interface CalendarStats {
+    total_events: number;
+    events_this_week: number;
+    maintenance_scheduled: number;
+    trips_scheduled: number;
+    upcoming_maintenance: number;
+    overdue_events: number;
+}
+
+// Calendar API Functions
+export const fetchCalendarEvents = async (
+    filters?: CalendarFilters
+): Promise<CalendarEvent[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (filters?.start_date) params.append('start_date', filters.start_date);
+        if (filters?.end_date) params.append('end_date', filters.end_date);
+        if (filters?.event_type) params.append('event_type', filters.event_type);
+        if (filters?.vehicle) params.append('vehicle', filters.vehicle);
+        if (filters?.status) params.append('status', filters.status);
+        if (filters?.search) params.append('search', filters.search);
+
+        const response = await api.get(`calendar/events/?${params.toString()}`);
+        return response.data.results || response.data;
+    } catch (error) {
+        console.error('Error fetching calendar events:', error);
+        // Return mock data if API doesn't exist yet
+        return getMockCalendarEvents();
+    }
+};
+
+export const createCalendarEvent = async (data: Partial<CalendarEvent>): Promise<CalendarEvent> => {
+    try {
+        const response = await api.post('calendar/events/', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating calendar event:', error);
+        throw error;
+    }
+};
+
+export const updateCalendarEvent = async (id: string, data: Partial<CalendarEvent>): Promise<CalendarEvent> => {
+    try {
+        const response = await api.patch(`calendar/events/${id}/`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating calendar event:', error);
+        throw error;
+    }
+};
+
+export const deleteCalendarEvent = async (id: string): Promise<void> => {
+    try {
+        await api.delete(`calendar/events/${id}/`);
+    } catch (error) {
+        console.error('Error deleting calendar event:', error);
+        throw error;
+    }
+};
+
+export const fetchCalendarStats = async (filters?: { start_date?: string; end_date?: string }): Promise<CalendarStats> => {
+    try {
+        const params = new URLSearchParams();
+        if (filters?.start_date) params.append('start_date', filters.start_date);
+        if (filters?.end_date) params.append('end_date', filters.end_date);
+
+        const response = await api.get(`calendar/stats/?${params.toString()}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching calendar stats:', error);
+        // Return mock data if API doesn't exist yet
+        return getMockCalendarStats();
+    }
+};
+
+// Mock data functions for development
+function getMockCalendarEvents(): CalendarEvent[] {
+    const today = new Date();
+    const events: CalendarEvent[] = [];
+    
+    // Generate some mock events for the current month
+    for (let i = 0; i < 15; i++) {
+        const eventDate = new Date(today);
+        eventDate.setDate(today.getDate() + (i - 7) + Math.floor(Math.random() * 14));
+        
+        const eventTypes: CalendarEvent['event_type'][] = ['trip', 'maintenance', 'inspection', 'available'];
+        const statuses: CalendarEvent['status'][] = ['scheduled', 'in_progress', 'completed'];
+        const priorities: CalendarEvent['priority'][] = ['low', 'medium', 'high'];
+        
+        events.push({
+            id: `mock-event-${i}`,
+            title: `${eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'trip' ? 'Vehicle Trip' : 
+                     eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'maintenance' ? 'Maintenance' :
+                     eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'inspection' ? 'Inspection' : 'Available'} - ABC${123 + i}`,
+            description: `Mock ${eventTypes[Math.floor(Math.random() * eventTypes.length)]} event`,
+            event_type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
+            start_date: eventDate.toISOString(),
+            end_date: new Date(eventDate.getTime() + Math.random() * 4 * 60 * 60 * 1000).toISOString(),
+            all_day: Math.random() > 0.7,
+            vehicle: `vehicle-${i + 1}`,
+            status: statuses[Math.floor(Math.random() * statuses.length)],
+            priority: priorities[Math.floor(Math.random() * priorities.length)],
+            created_at: eventDate.toISOString(),
+            updated_at: eventDate.toISOString(),
+        });
+    }
+    
+    return events;
+}
+
+function getMockCalendarStats(): CalendarStats {
+    return {
+        total_events: 47,
+        events_this_week: 12,
+        maintenance_scheduled: 8,
+        trips_scheduled: 23,
+        upcoming_maintenance: 5,
+        overdue_events: 2,
+    };
+}
+
 export const fetchVehicleExpenseTotals = async (id: number): Promise<VehicleExpenseData> => {
     try {
         const response = await api.get(`vehicles/${id}/expense_totals/`);

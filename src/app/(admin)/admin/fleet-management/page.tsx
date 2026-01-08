@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchVehicles, Vehicle, deleteVehicle, fetchVehicleStatistics, fetchSuppliers, Supplier } from '@/lib/api'
 
 import { motion } from 'framer-motion'
-import { Car, Wrench, Plus, Search, Eye, Edit, Trash2, RefreshCw } from 'lucide-react'
+import { Car, Wrench, Plus, Search, Eye, Edit, Trash2, RefreshCw, Calendar } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import StatCard from '@/components/shared/stat-card'
 import { colors } from '@/lib/theme/colors'
@@ -171,14 +171,24 @@ export default function FleetManagementPage() {
             Manage vehicles, track expenses, and monitor maintenance
           </p>
         </div>
-        <button
-          onClick={() => window.location.href = '/admin/fleet-management/create'}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: colors.adminPrimary }}
-        >
-          <Plus size={20} />
-          Add Vehicle
-        </button>
+        <div className="flex items-center gap-3">
+           <button
+             onClick={() => window.location.href = '/admin/fleet-management/calendar'}
+             className="flex items-center gap-2 px-4 py-2 rounded-lg border font-medium hover:bg-gray-50 transition-colors"
+             style={{ borderColor: colors.borderLight, color: colors.textPrimary }}
+           >
+             <Calendar size={20} />
+             Calendar
+           </button>
+           <button
+             onClick={() => window.location.href = '/admin/fleet-management/create'}
+             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
+             style={{ backgroundColor: colors.adminPrimary }}
+           >
+             <Plus size={20} />
+             Add Vehicle
+           </button>
+         </div>
       </div>
 
       {/* Stats Grid */}
