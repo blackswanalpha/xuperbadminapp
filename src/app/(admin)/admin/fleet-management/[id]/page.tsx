@@ -169,20 +169,22 @@ export default function VehicleDetailsPage() {
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status.toUpperCase()) {
+    const s = (status || '').toUpperCase()
+    switch (s) {
       case 'AVAILABLE':
         return <CheckCircle size={20} style={{ color: colors.adminSuccess }} />
       case 'HIRED':
         return <Car size={20} style={{ color: colors.adminPrimary }} />
       case 'IN_GARAGE':
-        return <Settings size={20} style={{ color: colors.adminWarning }} />
+        return <Wrench size={20} style={{ color: colors.adminWarning }} />
       default:
         return <AlertTriangle size={20} style={{ color: colors.adminError }} />
     }
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
+    const s = (status || '').toUpperCase()
+    switch (s) {
       case 'AVAILABLE':
         return colors.adminSuccess
       case 'HIRED':
@@ -609,8 +611,8 @@ export default function VehicleDetailsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {expenseData.expense_breakdown.map((category, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="p-3 rounded-lg border"
                       style={{ borderColor: colors.borderLight }}
                     >
@@ -731,15 +733,15 @@ export default function VehicleDetailsPage() {
             <div className="flex justify-between">
               <span style={{ color: colors.textSecondary }}>Status</span>
               <div className="flex items-center gap-2">
-                {getStatusIcon(vehicle.status)}
+                {getStatusIcon((vehicle as any).calculated_status || vehicle.status)}
                 <span
                   className="px-3 py-1 rounded-full text-xs font-medium"
                   style={{
-                    backgroundColor: `${getStatusColor(vehicle.status)}20`,
-                    color: getStatusColor(vehicle.status),
+                    backgroundColor: `${getStatusColor((vehicle as any).calculated_status || vehicle.status)}20`,
+                    color: getStatusColor((vehicle as any).calculated_status || vehicle.status),
                   }}
                 >
-                  {vehicle.status}
+                  {(vehicle as any).calculated_status || vehicle.status}
                 </span>
               </div>
             </div>

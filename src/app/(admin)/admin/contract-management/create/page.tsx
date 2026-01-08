@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation'
 import DashboardCard from '@/components/shared/dashboard-card'
 import SignaturePad from '@/components/shared/signature-pad'
 import { colors } from '@/lib/theme/colors'
-import { fetchVehicles, fetchUsers, createUser } from '@/lib/api'
+import { fetchVehicles, fetchUsers, createUser, updateUser } from '@/lib/api'
 import api from '@/lib/axios'
 import axios from 'axios'
 import { DatePicker } from '@/components/shared/date-picker'
@@ -291,12 +291,44 @@ export default function CreateContractPage() {
             ...(formData.newClientLng && !isNaN(parseFloat(formData.newClientLng)) && { longitude: parseFloat(formData.newClientLng) }),
           }
 
-          const newUser = await createUser(newUserPayload as any)
-          clientId = Number(newUser.id)
-        } catch (createError: any) {
-          console.error('Error creating new client:', createError)
+          try {
+            const newUser = await createUser(newUserPayload as any)
+            clientId = Number(newUser.id)
+          } catch (createError: any) {
+            // Check if user already exists (usually 400 Bad Request with field errors)
+            if (axios.isAxiosError(createError) && createError.response?.status === 400) {
+              const errorData = createError.response.data
+              const isConflict = errorData.email ||
+                (typeof errorData.error === 'string' && errorData.error.toLowerCase().includes('already exists')) ||
+                (errorData.detail && errorData.detail.toLowerCase().includes('already exists'))
 
-          let errorMessage = 'Failed to create new client.'
+              if (isConflict) {
+                try {
+                  // Try to find the existing user by email
+                  const usersResponse = await fetchUsers(1, 10, email)
+                  const existingUser = usersResponse.results.find((u: any) => u.email.toLowerCase() === email.toLowerCase())
+
+                  if (existingUser) {
+                    // Update existing user with provided info
+                    const updatedUser = await updateUser(existingUser.id, newUserPayload as any)
+                    clientId = Number(updatedUser.id)
+                  } else {
+                    throw createError
+                  }
+                } catch (findError) {
+                  throw createError
+                }
+              } else {
+                throw createError
+              }
+            } else {
+              throw createError
+            }
+          }
+        } catch (createError: any) {
+          console.error('Error handling client creation/update:', createError)
+
+          let errorMessage = 'Failed to handle client information.'
           if (axios.isAxiosError(createError) && createError.response?.data) {
             const data = createError.response.data
             if (data.error) {

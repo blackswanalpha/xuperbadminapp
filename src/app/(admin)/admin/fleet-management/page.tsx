@@ -133,21 +133,21 @@ export default function FleetManagementPage() {
     },
     {
       title: 'Available',
-      value: statistics?.available?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => v.status === 'AVAILABLE').length.toString() : '0'),
+      value: statistics?.available?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => (v.status === 'AVAILABLE' || (v as any).calculated_status === 'AVAILABLE')).length.toString() : '0'),
       icon: Car,
       trend: { value: '+3', isPositive: true },
       color: colors.adminSuccess,
     },
     {
       title: 'Hired',
-      value: statistics?.hired?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => v.status === 'HIRED').length.toString() : '0'),
+      value: statistics?.hired?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => (v.status === 'HIRED' || (v as any).calculated_status === 'HIRED')).length.toString() : '0'),
       icon: Car,
       trend: { value: `${statistics?.hired || 0}/${statistics?.total || vehicles.length}`, isPositive: true },
       color: colors.adminPrimary,
     },
     {
       title: 'In Garage',
-      value: statistics?.in_garage?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => v.status === 'IN_GARAGE').length.toString() : '0'),
+      value: statistics?.in_garage?.toString() || (Array.isArray(vehicles) ? vehicles.filter(v => (v.status === 'IN_GARAGE' || (v as any).calculated_status === 'IN_GARAGE')).length.toString() : '0'),
       icon: Wrench,
       trend: { value: '-1', isPositive: true },
       color: colors.adminWarning,
@@ -172,23 +172,23 @@ export default function FleetManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-           <button
-             onClick={() => window.location.href = '/admin/fleet-management/calendar'}
-             className="flex items-center gap-2 px-4 py-2 rounded-lg border font-medium hover:bg-gray-50 transition-colors"
-             style={{ borderColor: colors.borderLight, color: colors.textPrimary }}
-           >
-             <Calendar size={20} />
-             Calendar
-           </button>
-           <button
-             onClick={() => window.location.href = '/admin/fleet-management/create'}
-             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
-             style={{ backgroundColor: colors.adminPrimary }}
-           >
-             <Plus size={20} />
-             Add Vehicle
-           </button>
-         </div>
+          <button
+            onClick={() => window.location.href = '/admin/fleet-management/calendar'}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border font-medium hover:bg-gray-50 transition-colors"
+            style={{ borderColor: colors.borderLight, color: colors.textPrimary }}
+          >
+            <Calendar size={20} />
+            Calendar
+          </button>
+          <button
+            onClick={() => window.location.href = '/admin/fleet-management/create'}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: colors.adminPrimary }}
+          >
+            <Plus size={20} />
+            Add Vehicle
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -376,23 +376,27 @@ export default function FleetManagementPage() {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          className="px-3 py-1 rounded-full text-xs font-medium text-center inline-block min-w-[100px]"
                           style={{
                             backgroundColor:
-                              vehicle.status === 'AVAILABLE'
+                              ((vehicle as any).calculated_status || vehicle.status) === 'AVAILABLE'
                                 ? `${colors.adminSuccess}20`
-                                : vehicle.status === 'ON_TRIP'
+                                : ((vehicle as any).calculated_status || vehicle.status) === 'HIRED'
                                   ? `${colors.adminPrimary}20`
-                                  : `${colors.adminWarning}20`,
+                                  : ((vehicle as any).calculated_status || vehicle.status) === 'IN_GARAGE'
+                                    ? `${colors.adminWarning}20`
+                                    : `${colors.adminError}20`,
                             color:
-                              vehicle.status === 'AVAILABLE'
+                              ((vehicle as any).calculated_status || vehicle.status) === 'AVAILABLE'
                                 ? colors.adminSuccess
-                                : vehicle.status === 'ON_TRIP'
+                                : ((vehicle as any).calculated_status || vehicle.status) === 'HIRED'
                                   ? colors.adminPrimary
-                                  : colors.adminWarning,
+                                  : ((vehicle as any).calculated_status || vehicle.status) === 'IN_GARAGE'
+                                    ? colors.adminWarning
+                                    : colors.adminError,
                           }}
                         >
-                          {vehicle.status}
+                          {((vehicle as any).calculated_status || vehicle.status)?.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="py-3 px-4">
