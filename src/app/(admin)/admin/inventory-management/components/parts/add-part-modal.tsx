@@ -6,11 +6,9 @@ import { X, Save, Package, Tag, MapPin } from 'lucide-react'
 import { colors } from '@/lib/theme/colors'
 import {
   createPart,
-  fetchPartCategories,
   fetchInventorySuppliers,
 } from '@/lib/api'
 import {
-  PartCategory,
   InventorySupplier,
 } from '@/types/inventory-api'
 
@@ -20,7 +18,6 @@ interface AddPartModalProps {
 }
 
 export default function AddPartModal({ onClose, onAdd }: AddPartModalProps) {
-  const [categories, setCategories] = useState<PartCategory[]>([])
   const [suppliers, setSuppliers] = useState<InventorySupplier[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -31,14 +28,12 @@ export default function AddPartModal({ onClose, onAdd }: AddPartModalProps) {
     name: '',
     description: '',
     sku: '',
-    category: '',
     supplier: '',
     unit: 'PIECE',
     unit_cost: '',
     min_stock_level: '',
     max_stock_level: '',
     current_stock: '',
-    location: '',
   })
 
   useEffect(() => {
@@ -50,16 +45,12 @@ export default function AddPartModal({ onClose, onAdd }: AddPartModalProps) {
       setLoading(true)
       setError(null)
 
-      const [categoriesResponse, suppliersResponse] = await Promise.all([
-        fetchPartCategories(),
-        fetchInventorySuppliers(),
-      ])
+      const suppliersResponse = await fetchInventorySuppliers()
 
-      setCategories(categoriesResponse.results)
       setSuppliers(suppliersResponse.results)
     } catch (err) {
       console.error('Error loading data:', err)
-      setError('Failed to load categories and suppliers')
+      setError('Failed to load suppliers')
     } finally {
       setLoading(false)
     }
@@ -83,14 +74,12 @@ export default function AddPartModal({ onClose, onAdd }: AddPartModalProps) {
         name: formData.name,
         description: formData.description,
         sku: formData.sku,
-        category: formData.category ? parseInt(formData.category) : null,
         supplier: formData.supplier ? parseInt(formData.supplier) : null,
         unit: formData.unit as 'PIECE' | 'SET' | 'LITER' | 'KILOGRAM' | 'METER' | 'PAIR',
         unit_cost: formData.unit_cost || '0',
         min_stock_level: formData.min_stock_level ? parseInt(formData.min_stock_level) : 0,
         max_stock_level: formData.max_stock_level ? parseInt(formData.max_stock_level) : 0,
         current_stock: formData.current_stock ? parseInt(formData.current_stock) : 0,
-        location: formData.location || null,
       }
 
       await createPart(partData)
@@ -212,30 +201,11 @@ export default function AddPartModal({ onClose, onAdd }: AddPartModalProps) {
               {/* Category and Supplier */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.textPrimary }}>
-                  <MapPin size={20} />
+                  <Package size={20} />
                   Classification
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-                      Category
-                    </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => handleInputChange('category', e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                       Supplier
                     </label>
@@ -349,19 +319,7 @@ export default function AddPartModal({ onClose, onAdd }: AddPartModalProps) {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-                    Storage Location
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                    style={{ borderColor: colors.borderLight }}
-                    placeholder="Enter storage location (e.g., Warehouse A, Shelf 1)"
-                  />
-                </div>
+
               </div>
 
               {/* Actions */}

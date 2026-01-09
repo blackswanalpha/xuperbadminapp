@@ -24,11 +24,11 @@ import { Tabs, TabPanel } from '@/components/shared/tabs'
 import DeleteConfirmationModal from '@/components/shared/delete-confirmation-modal'
 import { colors } from '@/lib/theme/colors'
 import {
-  fetchInvoices,
+  fetchPayments,
   fetchAllExpenses,
   fetchFinancialAnalysis,
   fetchRecentActivities,
-  Invoice,
+  Payment,
   Expense,
   FinancialAnalysis,
   RecentActivitiesResponse,
@@ -39,14 +39,14 @@ export default function QuickManagementPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
-  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [income, setIncome] = useState<Payment[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [financialAnalysis, setFinancialAnalysis] = useState<FinancialAnalysis | null>(null)
   const [recentActivities, setRecentActivities] = useState<Activity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
-    type: 'invoice' | 'expense' | null
+    type: 'income' | 'expense' | null
     id: string
     details: { label: string; value: string }[]
   }>({
@@ -61,13 +61,13 @@ export default function QuickManagementPage() {
     const loadData = async () => {
       setIsLoading(true)
       try {
-        const [invoicesData, expensesData, analysisData, activitiesData] = await Promise.all([
-          fetchInvoices(),
+        const [paymentsData, expensesData, analysisData, activitiesData] = await Promise.all([
+          fetchPayments(),
           fetchAllExpenses(),
           fetchFinancialAnalysis(),
           fetchRecentActivities()
         ])
-        setInvoices(invoicesData.invoices || [])
+        setIncome(paymentsData.payments || [])
         setExpenses(expensesData || [])
         setFinancialAnalysis(analysisData)
         setRecentActivities(activitiesData.activities || [])
@@ -81,39 +81,44 @@ export default function QuickManagementPage() {
   }, [])
 
   // Calculate stats with safety checks
-  const invoicesList = Array.isArray(invoices) ? invoices : []
+  const incomeList = Array.isArray(income) ? income : []
   const expensesList = Array.isArray(expenses) ? expenses : []
 
-  const totalInvoices = invoicesList.length
-  const totalExpenses = financialAnalysis?.total_expenses || expensesList.reduce((sum, exp) => sum + (exp.amount || 0), 0)
-  const totalRevenue = financialAnalysis?.total_revenue || invoicesList.reduce((sum, inv) => sum + (inv.amount || 0), 0)
-  const netRevenue = financialAnalysis?.net_profit || (totalRevenue - totalExpenses)
-  const pendingInvoices = invoicesList.filter((inv) => inv.status === 'PENDING').length
+  const totalIncome = incomeList.length
+  const totalExpensesAmount = financialAnalysis?.total_expenses || expensesList.reduce((sum, exp) => sum + (exp.amount || 0), 0)
+  const totalRevenue = financialAnalysis?.total_revenue || incomeList.reduce((sum, payment) => sum + (typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0), 0)
+  const netRevenue = financialAnalysis?.net_profit || (totalRevenue - totalExpensesAmount)
+  const successfulPayments = incomeList.filter((payment) => payment.status === 'SUCCESS').length
   const pendingExpenses = expensesList.filter((exp) => exp.status.toLowerCase() === 'pending').length
-  const pendingItems = pendingInvoices + pendingExpenses
+  const pendingPayments = incomeList.filter((payment) => payment.status === 'PENDING').length
+  const pendingItems = pendingPayments + pendingExpenses
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-    { id: 'invoices', label: 'Invoices', icon: <FileText size={18} /> },
+    { id: 'income', label: 'Income', icon: <DollarSign size={18} /> },
     { id: 'expenses', label: 'Expenses', icon: <Wrench size={18} /> },
     { id: 'analysis', label: 'Analysis', icon: <BarChart3 size={18} /> },
   ]
 
   const formatCurrency = (amount: number) => `KSh ${amount.toLocaleString()}`
 
-  const handleDeleteInvoice = (id: string) => {
-    const invoice = invoicesList.find((inv) => inv.id === id)
-    if (!invoice) return
+  const handleDeleteIncome = (id: string) => {
+    const payment = incomeList.find((p) => p.id.toString() === id)
+    if (!payment) return
+
+    const clientName = typeof payment.client === 'object'
+      ? `${payment.client.first_name || ''} ${payment.client.last_name || ''}`.trim() || payment.client.email
+      : payment.client_name || 'Client'
 
     setDeleteModal({
       isOpen: true,
-      type: 'invoice',
+      type: 'income',
       id,
       details: [
-        { label: 'Invoice ID', value: invoice.id },
-        { label: 'Client', value: invoice.client_name || 'Client' },
-        { label: 'Amount', value: formatCurrency(invoice.amount) },
-        { label: 'Date', value: invoice.created_date },
+        { label: 'Payment ID', value: payment.id.toString() },
+        { label: 'Client', value: clientName },
+        { label: 'Amount', value: formatCurrency(typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0) },
+        { label: 'Date', value: payment.created_at },
       ],
     })
   }
@@ -139,17 +144,26 @@ export default function QuickManagementPage() {
   const confirmDelete = async () => {
     setIsDeleting(true)
 
-    // TODO: Implement actual API call to delete invoice/expense
-    setTimeout(() => {
-      setIsDeleting(false)
+    try {
+      if (deleteModal.type === 'income') {
+        // TODO: Implement payment delete API when available
+        alert('Payment deletion not yet implemented')
+        setIsDeleting(false)
+        return
+      } else if (deleteModal.type === 'expense') {
+        // TODO: Implement expense delete API when available
+        alert('Expense deletion not yet implemented')
+        setIsDeleting(false)
+        return
+      }
+
       setDeleteModal({ isOpen: false, type: null, id: '', details: [] })
-
-      // Show success notification
-      alert(`${deleteModal.type === 'invoice' ? 'Invoice' : 'Expense'} deleted successfully!`)
-
-      // In a real app, you would refetch the data here
-      // For now, we're just closing the modal
-    }, 1000)
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      alert(`Failed to delete ${deleteModal.type}. Please try again.`)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const closeDeleteModal = () => {
@@ -161,31 +175,31 @@ export default function QuickManagementPage() {
   const renderDashboardTab = () => {
     const dashboardStats = [
       {
-        title: 'Total Invoices',
-        value: totalInvoices.toString(),
-        icon: FileText,
-        trend: { value: '+12', isPositive: true },
+        title: 'Total Income',
+        value: formatCurrency(totalRevenue),
+        icon: DollarSign,
+        trend: { value: `${totalIncome} payments`, isPositive: true },
         color: colors.adminPrimary,
       },
       {
         title: 'Total Expenses',
-        value: formatCurrency(totalExpenses),
-        icon: DollarSign,
-        trend: { value: '+5', isPositive: false },
+        value: formatCurrency(totalExpensesAmount),
+        icon: Wrench,
+        trend: { value: `${expensesList.length} items`, isPositive: false },
         color: colors.adminError,
       },
       {
         title: 'Net Revenue',
         value: formatCurrency(netRevenue),
         icon: TrendingUp,
-        trend: { value: '+18%', isPositive: true },
+        trend: { value: netRevenue > 0 ? 'Profit' : 'Loss', isPositive: netRevenue > 0 },
         color: colors.adminSuccess,
       },
       {
         title: 'Pending Items',
         value: pendingItems.toString(),
         icon: Clock,
-        trend: { value: '-3', isPositive: true },
+        trend: { value: `${pendingPayments} payments, ${pendingExpenses} expenses`, isPositive: pendingItems === 0 },
         color: colors.adminWarning,
       },
     ]
@@ -216,12 +230,12 @@ export default function QuickManagementPage() {
             <DashboardCard title="Quick Actions">
               <div className="space-y-3">
                 <button
-                  onClick={() => router.push('/admin/quick-management/invoices/create')}
+                  onClick={() => router.push('/admin/contracts')}
                   className="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed hover:border-solid transition-all"
                   style={{ borderColor: colors.adminPrimary, color: colors.adminPrimary }}
                 >
                   <Plus size={20} />
-                  <span className="font-medium">Create New Invoice</span>
+                  <span className="font-medium">Record New Payment</span>
                 </button>
                 <button
                   onClick={() => router.push('/admin/quick-management/expenses/create')}
@@ -281,9 +295,9 @@ export default function QuickManagementPage() {
   }
 
   const renderAnalysisTab = () => {
-    const totalPaidInvoices = invoicesList.filter((inv) => inv.status === 'PAID').length
+    const totalSuccessfulPayments = incomeList.filter((payment) => payment.status === 'SUCCESS').length
     const totalApprovedExpenses = expensesList.filter((exp) => exp.status.toLowerCase() === 'approved').length
-    const avgInvoiceValue = totalInvoices > 0 ? (totalRevenue / totalInvoices) : 0
+    const avgPaymentValue = totalIncome > 0 ? (totalRevenue / totalIncome) : 0
     const profitMargin = totalRevenue > 0 ? ((netRevenue / totalRevenue) * 100).toFixed(1) : '0.0'
 
     const expensesByCategory = financialAnalysis?.expense_breakdown.reduce((acc, item) => {
@@ -317,8 +331,8 @@ export default function QuickManagementPage() {
             transition={{ delay: 0.2, duration: 0.5 }}
           >
             <StatCard
-              title="Avg Invoice Value"
-              value={formatCurrency(avgInvoiceValue)}
+              title="Avg Payment Value"
+              value={formatCurrency(avgPaymentValue)}
               icon={DollarSign}
               trend={{ value: '+5%', isPositive: true }}
               color={colors.adminPrimary}
@@ -330,10 +344,10 @@ export default function QuickManagementPage() {
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             <StatCard
-              title="Paid Invoices"
-              value={totalPaidInvoices.toString()}
-              icon={FileText}
-              trend={{ value: `${totalPaidInvoices}/${totalInvoices}`, isPositive: true }}
+              title="Successful Payments"
+              value={totalSuccessfulPayments.toString()}
+              icon={DollarSign}
+              trend={{ value: `${totalSuccessfulPayments}/${totalIncome}`, isPositive: true }}
               color={colors.adminAccent}
             />
           </motion.div>
@@ -383,14 +397,14 @@ export default function QuickManagementPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span style={{ color: colors.textSecondary }}>Total Expenses</span>
                     <span className="font-semibold" style={{ color: colors.adminError }}>
-                      {formatCurrency(totalExpenses)}
+                      {formatCurrency(totalExpensesAmount)}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className="h-3 rounded-full"
                       style={{
-                        width: `${(totalExpenses / totalRevenue) * 100}%`,
+                        width: `${(totalExpensesAmount / totalRevenue) * 100}%`,
                         backgroundColor: colors.adminError,
                       }}
                     />
@@ -419,7 +433,7 @@ export default function QuickManagementPage() {
             <DashboardCard title="Expense Breakdown" subtitle="By category">
               <div className="space-y-4">
                 {Object.entries(expensesByCategory).map(([category, amount], index) => {
-                  const percentage = ((amount / totalExpenses) * 100).toFixed(1)
+                  const percentage = ((amount / totalExpensesAmount) * 100).toFixed(1)
                   const categoryColor =
                     category === 'Service'
                       ? colors.adminPrimary
@@ -650,12 +664,27 @@ export default function QuickManagementPage() {
     )
   }
 
-  const renderInvoicesTab = () => {
-    const filteredInvoices = invoicesList.filter(
-      (invoice) =>
-        invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (invoice.client_name && invoice.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  const renderIncomeTab = () => {
+    const filteredIncome = incomeList.filter(
+      (payment) =>
+        payment.id.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (payment.client_name && payment.client_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (payment.contract_number && payment.contract_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (typeof payment.client === 'object' && payment.client.email && payment.client.email.toLowerCase().includes(searchQuery.toLowerCase()))
     )
+
+    const getClientName = (payment: Payment) => {
+      if (payment.client_name) return payment.client_name
+      if (typeof payment.client === 'object') {
+        const name = `${payment.client.first_name || ''} ${payment.client.last_name || ''}`.trim()
+        return name || payment.client.email
+      }
+      return 'Client'
+    }
+
+    const getPaymentAmount = (payment: Payment) => {
+      return typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0
+    }
 
     return (
       <TabPanel>
@@ -665,8 +694,8 @@ export default function QuickManagementPage() {
           transition={{ delay: 0.2, duration: 0.6 }}
         >
           <DashboardCard
-            title="All Invoices"
-            subtitle={`${filteredInvoices.length} invoices found`}
+            title="All Income"
+            subtitle={`${filteredIncome.length} payments found`}
             action={
               <div className="flex items-center gap-2">
                 <div className="relative">
@@ -677,21 +706,13 @@ export default function QuickManagementPage() {
                   />
                   <input
                     type="text"
-                    placeholder="Search invoices..."
+                    placeholder="Search income..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all text-sm"
                     style={{ borderColor: colors.borderLight }}
                   />
                 </div>
-                <button
-                  onClick={() => router.push('/admin/quick-management/invoices/create')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: colors.adminPrimary }}
-                >
-                  <Plus size={18} />
-                  Create Invoice
-                </button>
               </div>
             }
           >
@@ -700,13 +721,19 @@ export default function QuickManagementPage() {
                 <thead>
                   <tr className="border-b" style={{ borderColor: colors.borderLight }}>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Invoice ID
+                      Payment ID
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Client
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Contract
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Amount
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                      Method
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Status
@@ -720,9 +747,9 @@ export default function QuickManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((invoice, index) => (
+                  {filteredIncome.map((payment, index) => (
                     <motion.tr
-                      key={invoice.id}
+                      key={payment.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + index * 0.05, duration: 0.5 }}
@@ -730,61 +757,70 @@ export default function QuickManagementPage() {
                       style={{ borderColor: colors.borderLight }}
                     >
                       <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
-                        {invoice.id}
+                        {payment.id}
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {invoice.client_name || invoice.client}
+                        {getClientName(payment)}
+                      </td>
+                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
+                        {payment.contract_number || payment.contract || '-'}
                       </td>
                       <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(invoice.amount)}
+                        {formatCurrency(getPaymentAmount(payment))}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor: `${colors.adminPrimary}20`,
+                            color: colors.adminPrimary,
+                          }}
+                        >
+                          {payment.method}
+                        </span>
                       </td>
                       <td className="py-3 px-4">
                         <span
                           className="px-3 py-1 rounded-full text-xs font-medium"
                           style={{
                             backgroundColor:
-                              invoice.status === 'PAID'
+                              payment.status === 'SUCCESS'
                                 ? `${colors.adminSuccess}20`
-                                : invoice.status === 'PENDING'
+                                : payment.status === 'PENDING'
                                   ? `${colors.adminWarning}20`
                                   : `${colors.adminError}20`,
                             color:
-                              invoice.status === 'PAID'
+                              payment.status === 'SUCCESS'
                                 ? colors.adminSuccess
-                                : invoice.status === 'PENDING'
+                                : payment.status === 'PENDING'
                                   ? colors.adminWarning
                                   : colors.adminError,
                           }}
                         >
-                          {invoice.status}
+                          {payment.status}
                         </span>
                       </td>
                       <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {invoice.created_date}
+                        {new Date(payment.created_at).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => router.push(`/admin/quick-management/invoices/${invoice.id}`)}
+                            onClick={() => router.push(`/admin/quick-management/income/${payment.id}`)}
                             className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="View"
+                            title="View Payment Details"
                           >
                             <Eye size={16} style={{ color: colors.textSecondary }} />
                           </button>
-                          <button
-                            onClick={() => router.push(`/admin/quick-management/invoices/${invoice.id}/edit`)}
-                            className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit size={16} style={{ color: colors.adminPrimary }} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteInvoice(invoice.id)}
-                            className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} style={{ color: colors.adminError }} />
-                          </button>
+                          {payment.contract && (
+                            <button
+                              onClick={() => router.push(`/admin/contracts/${payment.contract}`)}
+                              className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                              title="View Contract"
+                            >
+                              <FileText size={16} style={{ color: colors.textSecondary }} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
@@ -811,7 +847,7 @@ export default function QuickManagementPage() {
             Quick Management
           </h1>
           <p style={{ color: colors.textSecondary }}>
-            Manage invoices, expenses, and financial records
+            Manage income, expenses, and financial records
           </p>
         </div>
 
@@ -822,7 +858,7 @@ export default function QuickManagementPage() {
 
         {/* Tab Content */}
         {activeTab === 'dashboard' && renderDashboardTab()}
-        {activeTab === 'invoices' && renderInvoicesTab()}
+        {activeTab === 'income' && renderIncomeTab()}
         {activeTab === 'expenses' && renderExpensesTab()}
         {activeTab === 'analysis' && renderAnalysisTab()}
       </motion.div>
@@ -832,8 +868,8 @@ export default function QuickManagementPage() {
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
         onConfirm={confirmDelete}
-        title={`Delete ${deleteModal.type === 'invoice' ? 'Invoice' : 'Expense'}`}
-        message={`Are you sure you want to delete this ${deleteModal.type}? This action cannot be undone.`}
+        title={`Delete ${deleteModal.type === 'income' ? 'Payment' : 'Expense'}`}
+        message={`Are you sure you want to delete this ${deleteModal.type === 'income' ? 'payment' : 'expense'}? This action cannot be undone.`}
         itemDetails={deleteModal.details}
         isDeleting={isDeleting}
       />

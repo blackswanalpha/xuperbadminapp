@@ -20,8 +20,7 @@ import {
 } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import { colors } from '@/lib/theme/colors'
-import { mockInvoices } from '@/data/quick-management-mock'
-import type { Invoice } from '@/types/quick-management'
+import { fetchInvoice, deleteInvoice, Invoice } from '@/lib/api'
 
 export default function InvoiceDetailPage() {
   const router = useRouter()
@@ -30,19 +29,25 @@ export default function InvoiceDetailPage() {
 
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // TODO: Replace with actual API call
-    const foundInvoice = mockInvoices.find((inv) => inv.id === invoiceId)
-    if (foundInvoice) {
-      setInvoice(foundInvoice)
-      setIsLoading(false)
-    } else {
-      setIsLoading(false)
-      alert('Invoice not found')
-      router.push('/dashboard/quick-management?tab=invoices')
+    const loadInvoice = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const data = await fetchInvoice(invoiceId)
+        setInvoice(data)
+      } catch (err) {
+        console.error('Failed to load invoice:', err)
+        setError('Invoice not found or failed to load')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [invoiceId, router])
+    loadInvoice()
+  }, [invoiceId])
 
   const formatCurrency = (amount: number) => {
     return `KSh ${amount.toLocaleString()}`
@@ -57,27 +62,36 @@ export default function InvoiceDetailPage() {
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Paid':
+    const normalizedStatus = status?.toUpperCase()
+    switch (normalizedStatus) {
+      case 'PAID':
         return <CheckCircle size={20} style={{ color: colors.adminSuccess }} />
-      case 'Pending':
+      case 'PENDING':
         return <Clock size={20} style={{ color: colors.adminWarning }} />
-      case 'Overdue':
+      case 'OVERDUE':
         return <XCircle size={20} style={{ color: colors.adminError }} />
+      case 'CANCELLED':
+        return <AlertCircle size={20} style={{ color: colors.textSecondary }} />
       default:
         return <AlertCircle size={20} style={{ color: colors.textSecondary }} />
     }
   }
 
   const handleEdit = () => {
-    router.push(`/dashboard/quick-management/invoices/${invoiceId}/edit`)
+    router.push(`/admin/quick-management/invoices/${invoiceId}/edit`)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-      // TODO: Implement delete API call
-      alert('Invoice deleted successfully!')
-      router.push('/dashboard/quick-management?tab=invoices')
+      try {
+        setIsDeleting(true)
+        await deleteInvoice(invoiceId)
+        router.push('/admin/quick-management?tab=invoices')
+      } catch (err) {
+        console.error('Failed to delete invoice:', err)
+        alert('Failed to delete invoice. Please try again.')
+        setIsDeleting(false)
+      }
     }
   }
 
@@ -97,21 +111,25 @@ export default function InvoiceDetailPage() {
 
   if (isLoading) {
     return (
-      
-        <div className="flex items-center justify-center h-64">
-          <p style={{ color: colors.textSecondary }}>Loading invoice...</p>
-        </div>
-      
+      <div className="flex items-center justify-center h-64">
+        <p style={{ color: colors.textSecondary }}>Loading invoice...</p>
+      </div>
     )
   }
 
-  if (!invoice) {
+  if (error || !invoice) {
     return (
-      
-        <div className="flex items-center justify-center h-64">
-          <p style={{ color: colors.textSecondary }}>Invoice not found</p>
-        </div>
-      
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <AlertCircle size={48} style={{ color: colors.adminError }} />
+        <p style={{ color: colors.textSecondary }}>{error || 'Invoice not found'}</p>
+        <button
+          onClick={() => router.push('/admin/quick-management?tab=invoices')}
+          className="px-4 py-2 rounded-lg text-white font-medium"
+          style={{ backgroundColor: colors.adminPrimary }}
+        >
+          Back to Invoices
+        </button>
+      </div>
     )
   }
 
@@ -142,15 +160,15 @@ export default function InvoiceDetailPage() {
                   className="px-3 py-1 rounded-full text-sm font-medium"
                   style={{
                     backgroundColor:
-                      invoice.status === 'Paid'
+                      invoice.status === 'PAID'
                         ? `${colors.adminSuccess}20`
-                        : invoice.status === 'Pending'
+                        : invoice.status === 'PENDING'
                         ? `${colors.adminWarning}20`
                         : `${colors.adminError}20`,
                     color:
-                      invoice.status === 'Paid'
+                      invoice.status === 'PAID'
                         ? colors.adminSuccess
-                        : invoice.status === 'Pending'
+                        : invoice.status === 'PENDING'
                         ? colors.adminWarning
                         : colors.adminError,
                   }}
@@ -197,10 +215,12 @@ export default function InvoiceDetailPage() {
             </button>
             <button
               onClick={handleDelete}
+              disabled={isDeleting}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border font-medium hover:bg-red-50 transition-colors"
-              style={{ borderColor: colors.adminError, color: colors.adminError }}
+              style={{ borderColor: colors.adminError, color: colors.adminError, opacity: isDeleting ? 0.6 : 1 }}
             >
               <Trash2 size={18} />
+              {isDeleting && 'Deleting...'}
             </button>
           </div>
         </div>
@@ -224,7 +244,7 @@ export default function InvoiceDetailPage() {
                       Client Name
                     </p>
                     <p className="font-semibold" style={{ color: colors.textPrimary }}>
-                      {invoice.clientName}
+                      {invoice.client_name || invoice.client || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -237,7 +257,7 @@ export default function InvoiceDetailPage() {
                       Client ID
                     </p>
                     <p className="font-semibold" style={{ color: colors.textPrimary }}>
-                      {invoice.clientId}
+                      {invoice.client || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -262,7 +282,7 @@ export default function InvoiceDetailPage() {
                       Invoice Date
                     </p>
                     <p className="font-semibold" style={{ color: colors.textPrimary }}>
-                      {formatDate(invoice.date)}
+                      {formatDate(invoice.created_date)}
                     </p>
                   </div>
                 </div>
@@ -275,7 +295,7 @@ export default function InvoiceDetailPage() {
                       Due Date
                     </p>
                     <p className="font-semibold" style={{ color: colors.textPrimary }}>
-                      {formatDate(invoice.dueDate)}
+                      {formatDate(invoice.due_date)}
                     </p>
                   </div>
                 </div>
@@ -291,27 +311,14 @@ export default function InvoiceDetailPage() {
           >
             <DashboardCard title="Amount Summary">
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span style={{ color: colors.textSecondary }}>Subtotal</span>
-                  <span className="font-semibold" style={{ color: colors.textPrimary }}>
-                    {formatCurrency(invoice.amount)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span style={{ color: colors.textSecondary }}>Tax</span>
-                  <span className="font-semibold" style={{ color: colors.textPrimary }}>
-                    {formatCurrency(invoice.tax)}
-                  </span>
-                </div>
                 <div
-                  className="flex items-center justify-between pt-3 border-t"
-                  style={{ borderColor: colors.borderLight }}
+                  className="flex items-center justify-between pt-3"
                 >
                   <span className="font-bold" style={{ color: colors.textPrimary }}>
                     Total Amount
                   </span>
                   <span className="font-bold text-xl" style={{ color: colors.adminPrimary }}>
-                    {formatCurrency(invoice.total)}
+                    {formatCurrency(invoice.amount)}
                   </span>
                 </div>
               </div>
@@ -319,61 +326,51 @@ export default function InvoiceDetailPage() {
           </motion.div>
         </div>
 
-        {/* Line Items */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="mb-6"
-        >
-          <DashboardCard title="Line Items" subtitle={`${invoice.lineItems.length} items`}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: colors.borderLight }}>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Description
-                    </th>
-                    <th className="text-center py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Quantity
-                    </th>
-                    <th className="text-right py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Rate
-                    </th>
-                    <th className="text-right py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.lineItems.map((item, index) => (
-                    <motion.tr
-                      key={item.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + index * 0.05, duration: 0.4 }}
-                      className="border-b"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {item.description}
-                      </td>
-                      <td className="py-3 px-4 text-center" style={{ color: colors.textPrimary }}>
-                        {item.quantity}
-                      </td>
-                      <td className="py-3 px-4 text-right" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(item.rate)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-semibold" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(item.amount)}
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </DashboardCard>
-        </motion.div>
+        {/* Line Items - Only show if available */}
+        {invoice.items && invoice.items.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mb-6"
+          >
+            <DashboardCard title="Line Items" subtitle={`${invoice.items.length} items`}>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: colors.borderLight }}>
+                      <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                        Description
+                      </th>
+                      <th className="text-right py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoice.items.map((item: any, index: number) => (
+                      <motion.tr
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + index * 0.05, duration: 0.4 }}
+                        className="border-b"
+                        style={{ borderColor: colors.borderLight }}
+                      >
+                        <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
+                          {item.description || item.name || 'Item'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-semibold" style={{ color: colors.textPrimary }}>
+                          {formatCurrency(item.amount || 0)}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </DashboardCard>
+          </motion.div>
+        )}
 
         {/* Metadata */}
         <motion.div
@@ -381,29 +378,28 @@ export default function InvoiceDetailPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         >
-          <DashboardCard title="Invoice Metadata">
+          <DashboardCard title="Invoice Details">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm mb-1" style={{ color: colors.textSecondary }}>
-                  Created At
+                  Invoice ID
                 </p>
                 <p className="font-medium" style={{ color: colors.textPrimary }}>
-                  {new Date(invoice.createdAt).toLocaleString()}
+                  {invoice.id}
                 </p>
               </div>
               <div>
                 <p className="text-sm mb-1" style={{ color: colors.textSecondary }}>
-                  Last Updated
+                  Created Date
                 </p>
                 <p className="font-medium" style={{ color: colors.textPrimary }}>
-                  {new Date(invoice.updatedAt).toLocaleString()}
+                  {formatDate(invoice.created_date)}
                 </p>
               </div>
             </div>
           </DashboardCard>
         </motion.div>
       </motion.div>
-    
   )
 }
 

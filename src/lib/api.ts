@@ -595,6 +595,148 @@ export const createInvoice = async (data: any): Promise<Invoice> => {
     }
 };
 
+export const fetchInvoice = async (id: string): Promise<Invoice> => {
+    try {
+        const response = await api.get(`invoices/${id}/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching invoice:', error);
+        throw error;
+    }
+};
+
+export const updateInvoice = async (id: string, data: Partial<Invoice>): Promise<Invoice> => {
+    try {
+        const response = await api.patch(`invoices/${id}/`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating invoice:', error);
+        throw error;
+    }
+};
+
+export const deleteInvoice = async (id: string): Promise<void> => {
+    try {
+        await api.delete(`invoices/${id}/`);
+    } catch (error) {
+        console.error('Error deleting invoice:', error);
+        throw error;
+    }
+};
+
+// Income API Functions (Contract Payments, Job Card Payments, etc.)
+
+export interface IncomeRecord {
+    id: string;
+    source_type: 'contract' | 'job_card' | 'invoice' | 'rental' | 'service' | 'other';
+    source_id: string;
+    client_name: string;
+    vehicle_id?: string;
+    amount: number;
+    date_earned: string;
+    date_received?: string;
+    status: 'pending' | 'received' | 'partial' | 'cancelled';
+    notes?: string;
+}
+
+export interface Payment {
+    id: number;
+    contract: number | null;
+    contract_number?: string;
+    client: { id: number; email: string; first_name?: string; last_name?: string } | number;
+    client_name?: string;
+    amount: string | number;
+    method: 'MPESA' | 'CARD' | 'BANK' | 'CASH';
+    status: 'SUCCESS' | 'PENDING' | 'FAILED';
+    transaction_id: string | null;
+    created_at: string;
+}
+
+export const fetchAllIncome = async (filters?: { search?: string, status?: string, source_type?: string }, page = 1, pageSize = 1000): Promise<{ income: IncomeRecord[], count: number }> => {
+    try {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
+        if (filters?.search) params.append('search', filters.search);
+        if (filters?.status) params.append('status', filters.status);
+        if (filters?.source_type) params.append('source_type', filters.source_type);
+
+        const response = await api.get<any>(`/accounting/income-sources/?${params.toString()}`);
+
+        if (response.data.results) {
+            return {
+                income: response.data.results,
+                count: response.data.count || 0
+            };
+        }
+
+        const income = Array.isArray(response.data) ? response.data : [];
+        return {
+            income,
+            count: income.length
+        };
+    } catch (error) {
+        console.error('Error fetching income:', error);
+        throw error;
+    }
+};
+
+export const fetchPayments = async (filters?: { search?: string, status?: string, method?: string }, page = 1, pageSize = 1000): Promise<{ payments: Payment[], count: number }> => {
+    try {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
+        if (filters?.search) params.append('search', filters.search);
+        if (filters?.status) params.append('status', filters.status);
+        if (filters?.method) params.append('method', filters.method);
+
+        const response = await api.get<any>(`/payments/?${params.toString()}`);
+
+        if (response.data.results) {
+            return {
+                payments: response.data.results,
+                count: response.data.count || 0
+            };
+        }
+
+        const payments = Array.isArray(response.data) ? response.data : [];
+        return {
+            payments,
+            count: payments.length
+        };
+    } catch (error) {
+        console.error('Error fetching payments:', error);
+        throw error;
+    }
+};
+
+export const fetchPayment = async (id: string | number): Promise<Payment> => {
+    try {
+        const response = await api.get<Payment>(`/payments/${id}/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching payment:', error);
+        throw error;
+    }
+};
+
+export const fetchIncomeBreakdown = async (days: number = 30): Promise<{
+    total_income: number;
+    by_source_type: { source_type: string; total_amount: number; count: number }[];
+    by_status: { status: string; total_amount: number; count: number }[];
+    received_vs_pending: { received: number; pending: number };
+}> => {
+    try {
+        const response = await api.get(`/accounting/income-sources/breakdown/?days=${days}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching income breakdown:', error);
+        throw error;
+    }
+};
+
 export const fetchVehiclesForSelect = async (): Promise<Vehicle[]> => {
     try {
         // Fetch a large number of vehicles for dropdown
@@ -1113,18 +1255,6 @@ export interface VehicleExpenseItem {
     supervisor_name?: string;
 }
 
-export interface Payment {
-    id: number;
-    contract: number | null;
-    contract_number?: string;
-    client: { id: number; email: string; first_name?: string; last_name?: string };
-    amount: string;
-    method: 'MPESA' | 'CARD' | 'BANK';
-    status: 'SUCCESS' | 'PENDING' | 'FAILED';
-    transaction_id: string | null;
-    created_at: string;
-}
-
 // Vehicle data fetching functions
 export const fetchPendingContracts = async (): Promise<Contract[]> => {
     try {
@@ -1464,21 +1594,21 @@ export const fetchCalendarStats = async (filters?: { start_date?: string; end_da
 function getMockCalendarEvents(): CalendarEvent[] {
     const today = new Date();
     const events: CalendarEvent[] = [];
-    
+
     // Generate some mock events for the current month
     for (let i = 0; i < 15; i++) {
         const eventDate = new Date(today);
         eventDate.setDate(today.getDate() + (i - 7) + Math.floor(Math.random() * 14));
-        
+
         const eventTypes: CalendarEvent['event_type'][] = ['trip', 'maintenance', 'inspection', 'available'];
         const statuses: CalendarEvent['status'][] = ['scheduled', 'in_progress', 'completed'];
         const priorities: CalendarEvent['priority'][] = ['low', 'medium', 'high'];
-        
+
         events.push({
             id: `mock-event-${i}`,
-            title: `${eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'trip' ? 'Vehicle Trip' : 
-                     eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'maintenance' ? 'Maintenance' :
-                     eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'inspection' ? 'Inspection' : 'Available'} - ABC${123 + i}`,
+            title: `${eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'trip' ? 'Vehicle Trip' :
+                eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'maintenance' ? 'Maintenance' :
+                    eventTypes[Math.floor(Math.random() * eventTypes.length)] === 'inspection' ? 'Inspection' : 'Available'} - ABC${123 + i}`,
             description: `Mock ${eventTypes[Math.floor(Math.random() * eventTypes.length)]} event`,
             event_type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
             start_date: eventDate.toISOString(),
@@ -1491,7 +1621,7 @@ function getMockCalendarEvents(): CalendarEvent[] {
             updated_at: eventDate.toISOString(),
         });
     }
-    
+
     return events;
 }
 
@@ -1617,9 +1747,17 @@ export interface Equipment {
     created_by_name: string;
 }
 
-export const fetchEquipmentList = async (): Promise<Equipment[]> => {
+export const fetchEquipmentList = async (
+    page = 1,
+    pageSize = 100
+): Promise<ApiResponse<Equipment>> => {
     try {
-        const response = await api.get('inventory/equipment/');
+        const response = await api.get('inventory/equipment/', {
+            params: {
+                page,
+                page_size: pageSize
+            }
+        });
         return response.data;
     } catch (error) {
         console.error('Error fetching equipment list:', error);
@@ -1667,25 +1805,126 @@ export const deleteEquipment = async (id: number): Promise<void> => {
 };
 
 // Job Card Interfaces and APIs
+export interface AuthorizedService {
+    id?: number;
+    description: string;
+    cost: number;
+    approved: boolean;
+}
+
+export interface ReportedDefect {
+    id?: number;
+    description: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    resolved: boolean;
+}
+
+export interface JobPayment {
+    id: number;
+    amount: number;
+    payment_date: string;
+    payment_method: 'cash' | 'mpesa' | 'bank_transfer' | 'cheque' | 'card';
+    reference_number?: string;
+    notes?: string;
+    recorded_by?: number;
+    recorded_by_name?: string;
+}
+
+export interface JobCardPart {
+    id: number;
+    part: number;
+    part_name: string;
+    part_sku: string;
+    quantity: number;
+    unit_price: number;
+    total_cost: number;
+    notes?: string;
+    added_at: string;
+    added_by?: number;
+    added_by_name?: string;
+}
+
 export interface JobCard {
     id: number;
+    // Section 1: Job Card Metadata
     job_card_number: string;
     date_created: string;
+    order_number?: string;
+    handled_by_mechanic: string;
+
+    // Section 2: Client Details
     client_name: string;
-    client_phone?: string;
-    client_email?: string;
+    client_email: string;
+    client_phone: string;
+
+    // Section 3: Car Details
+    make: string;
+    model: string;
     registration_number: string;
-    make?: string;
-    model?: string;
-    speedometer_reading?: number;
-    fuel_tank_level?: string;
-    estimated_cost?: number;
-    status: string;
-    payment_status: string;
+    speedometer_reading: number;
+    fuel_tank_level: 'Empty' | '1/4' | '1/2' | '3/4' | 'Full';
+    date_required: string;
+    chassis_number: string;
+    engine_number: string;
+    car_tested_with_customer: boolean;
+    road_test_required: boolean;
+
+    // Section 4: Vehicle Accessories Check
+    jack_available: boolean;
+    wheel_spanner_available: boolean;
+    spare_wheel_available: boolean;
+    tools_available: boolean;
+    wheel_caps_present: boolean;
+    radio_stereo_present: boolean;
+    door_mirrors_present: boolean;
+    triangles_present: boolean;
+    first_aid_kit_present: boolean;
+    cd_changer_present: boolean;
+    mats_present: boolean;
+    cigar_lighter_present: boolean;
+
+    // Nested data
+    authorized_services: AuthorizedService[];
+    reported_defects: ReportedDefect[];
+    payments: JobPayment[];
+    job_card_parts: JobCardPart[];
+
+    // Section 7: Workshop Notes
+    additional_work_found: string[];
+    parts_to_order: string[];
+    estimated_cost: number;
+    customer_approval_status: 'approved' | 'pending' | 'rejected';
+
+    // Section 8: Completion Section
+    work_done: string[];
+    mechanic_signature?: string;
+    customer_signature?: string;
+    date_released?: string;
+    date_completed?: string;
+    payment_status: 'paid' | 'unpaid' | 'deposit' | 'partial' | 'pending';
+
+    // Section 9: Payment Notice
+    cash_customer_note_shown: boolean;
+    cheque_policy_accepted: boolean;
+
+    // New fields
+    job_cost: number;
+    defects: string;
+    repairs: string;
+
+    // Metadata
+    created_by: number;
+    created_by_name: string;
+    created_at: string;
+    updated_at: string;
+    status: 'draft' | 'in_progress' | 'completed' | 'cancelled' | 'started' | 'pending';
+    mechanic_status?: string;
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+    // Computed fields
+    total_parts_cost: number;
     total_job_value: number;
     balance_due: number;
-    job_cost: number;
-    // Add other relevant fields as needed
 }
 
 export const fetchJobCards = async (

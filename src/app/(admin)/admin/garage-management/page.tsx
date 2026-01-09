@@ -14,28 +14,24 @@ import {
   Search,
   Filter,
   Car,
-  BarChart3
+  BarChart3,
+  Edit,
+  Trash,
+  X,
+  Save
 } from 'lucide-react'
 import DashboardCard from '@/components/shared/dashboard-card'
 import StatCard from '@/components/shared/stat-card'
 import { colors } from '@/lib/theme/colors'
-import { fetchJobCards, fetchEquipmentList, Equipment } from '@/lib/api'
-
-interface JobCard {
-  id: string
-  vehicle_registration: string
-  vehicle_make_model: string
-  customer_name: string
-  issue_description: string
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD'
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
-  assigned_mechanic?: string
-  estimated_cost: number
-  actual_cost?: number
-  date_created: string
-  date_completed?: string
-  estimated_completion?: string
-}
+import {
+  fetchJobCards,
+  fetchEquipmentList,
+  createEquipment,
+  updateEquipment,
+  deleteEquipment,
+  Equipment,
+  JobCard
+} from '@/lib/api'
 
 export default function GarageManagementPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'job-cards' | 'equipment' | 'reports'>('overview')
@@ -45,8 +41,26 @@ export default function GarageManagementPage() {
   const [error, setError] = useState<string | null>(null)
 
   // State for data from API
-  const [jobCards, setJobCards] = useState<any[]>([])
-  const [equipment, setEquipment] = useState<any[]>([])
+  const [jobCards, setJobCards] = useState<JobCard[]>([])
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+
+  // Equipment CRUD state
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false)
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null)
+  const [equipmentFormData, setEquipmentFormData] = useState({
+    name: '',
+    description: '',
+    serial_number: '',
+    purchase_date: '',
+    cost: 0,
+    condition: 'GOOD' as Equipment['condition'],
+    status: 'AVAILABLE' as Equipment['status'],
+    notes: ''
+  })
+  const [savingEquipment, setSavingEquipment] = useState(false)
+  const [showDeleteEquipmentModal, setShowDeleteEquipmentModal] = useState(false)
+  const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null)
+  const [deletingEquipment, setDeletingEquipment] = useState(false)
 
   // Fetch data on component mount
   useEffect(() => {
@@ -59,7 +73,7 @@ export default function GarageManagementPage() {
           fetchEquipmentList()
         ])
         setJobCards(jobCardsData.results || [])
-        setEquipment(equipmentData || [])
+        setEquipment(equipmentData.results || [])
       } catch (error) {
         console.error('Error loading garage management data:', error)
         setError('Failed to load data. Please try again.')
@@ -73,7 +87,7 @@ export default function GarageManagementPage() {
   // Calculate statistics
   const jobsCompletedToday = Array.isArray(jobCards) ? jobCards.filter(jc =>
     jc.status?.toLowerCase() === 'completed' &&
-    jc.date_completed === new Date().toISOString().split('T')[0]
+    (jc.date_completed || jc.date_released)?.split('T')[0] === new Date().toISOString().split('T')[0]
   ).length : 0
 
   const activeJobCardsCount = Array.isArray(jobCards) ? jobCards.filter(jc =>
@@ -90,19 +104,19 @@ export default function GarageManagementPage() {
   startOfWeek.setHours(0, 0, 0, 0)
 
   const jobsCompletedThisWeek = Array.isArray(jobCards) ? jobCards.filter(jc => {
-    if (jc.status?.toLowerCase() !== 'completed' || !jc.date_completed) return false
-    const completionDate = new Date(jc.date_completed)
+    if (jc.status?.toLowerCase() !== 'completed' || (!jc.date_completed && !jc.date_released)) return false
+    const completionDate = new Date(jc.date_completed || jc.date_released!)
     return completionDate >= startOfWeek
   }).length : 0
 
   // Calculate average completion time
   const completedJobsWithDates = Array.isArray(jobCards) ? jobCards.filter(jc =>
-    jc.status?.toLowerCase() === 'completed' && jc.date_completed && jc.date_created
+    jc.status?.toLowerCase() === 'completed' && (jc.date_completed || jc.date_released) && jc.date_created
   ) : []
 
   const totalCompletionTimeMs = completedJobsWithDates.reduce((acc, jc) => {
     const start = new Date(jc.date_created).getTime()
-    const end = new Date(jc.date_completed!).getTime()
+    const end = new Date(jc.date_completed || jc.date_released!).getTime()
     return acc + (end - start)
   }, 0)
 
@@ -181,14 +195,114 @@ export default function GarageManagementPage() {
 
   const filteredJobCards = Array.isArray(jobCards) ? jobCards.filter(jobCard => {
     const matchesSearch = searchTerm === '' ||
-      jobCard.vehicle_registration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      jobCard.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      jobCard.issue_description?.toLowerCase().includes(searchTerm.toLowerCase())
+      jobCard.registration_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobCard.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobCard.job_card_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobCard.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobCard.model?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesStatus = statusFilter === 'ALL' || jobCard.status === statusFilter
+    const matchesStatus = statusFilter === 'ALL' || jobCard.status?.toUpperCase() === statusFilter
 
     return matchesSearch && matchesStatus
   }) : []
+
+  // Equipment CRUD handlers
+  const resetEquipmentForm = () => {
+    setEquipmentFormData({
+      name: '',
+      description: '',
+      serial_number: '',
+      purchase_date: '',
+      cost: 0,
+      condition: 'GOOD',
+      status: 'AVAILABLE',
+      notes: ''
+    })
+    setEditingEquipment(null)
+  }
+
+  const openAddEquipmentModal = () => {
+    resetEquipmentForm()
+    setShowEquipmentModal(true)
+  }
+
+  const openEditEquipmentModal = (item: Equipment) => {
+    setEditingEquipment(item)
+    setEquipmentFormData({
+      name: item.name,
+      description: item.description || '',
+      serial_number: item.serial_number || '',
+      purchase_date: item.purchase_date || '',
+      cost: item.cost,
+      condition: item.condition,
+      status: item.status,
+      notes: item.notes || ''
+    })
+    setShowEquipmentModal(true)
+  }
+
+  const handleEquipmentFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setEquipmentFormData(prev => ({
+      ...prev,
+      [name]: name === 'cost' ? parseFloat(value) || 0 : value
+    }))
+  }
+
+  const handleSaveEquipment = async () => {
+    if (!equipmentFormData.name.trim()) {
+      alert('Equipment name is required')
+      return
+    }
+
+    setSavingEquipment(true)
+    try {
+      if (editingEquipment) {
+        // Update existing equipment
+        const updated = await updateEquipment(editingEquipment.id, equipmentFormData)
+        setEquipment(prev => prev.map(e => e.id === editingEquipment.id ? updated : e))
+      } else {
+        // Create new equipment
+        const created = await createEquipment(equipmentFormData)
+        setEquipment(prev => [...prev, created])
+      }
+      setShowEquipmentModal(false)
+      resetEquipmentForm()
+    } catch (error) {
+      console.error('Error saving equipment:', error)
+      alert('Failed to save equipment. Please try again.')
+    } finally {
+      setSavingEquipment(false)
+    }
+  }
+
+  const handleDeleteEquipment = async () => {
+    if (!equipmentToDelete) return
+
+    setDeletingEquipment(true)
+    try {
+      await deleteEquipment(equipmentToDelete.id)
+      setEquipment(prev => prev.filter(e => e.id !== equipmentToDelete.id))
+      setShowDeleteEquipmentModal(false)
+      setEquipmentToDelete(null)
+    } catch (error) {
+      console.error('Error deleting equipment:', error)
+      alert('Failed to delete equipment. Please try again.')
+    } finally {
+      setDeletingEquipment(false)
+    }
+  }
+
+  const getConditionColor = (condition: string) => {
+    switch (condition) {
+      case 'EXCELLENT': return colors.adminSuccess
+      case 'GOOD': return colors.adminPrimary
+      case 'FAIR': return colors.adminWarning
+      case 'POOR': return colors.adminError
+      case 'DAMAGED': return '#6B7280'
+      default: return colors.textSecondary
+    }
+  }
 
   // Loading state
   if (loading) {
@@ -287,39 +401,44 @@ export default function GarageManagementPage() {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <div className="font-medium" style={{ color: colors.textPrimary }}>
-                    {jobCard.job_card_number || `JC-${String(jobCard.id).padStart(3, '0')}`} - {jobCard.vehicle_registration}
+                    {jobCard.job_card_number} - {jobCard.registration_number}
                   </div>
                   <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    {jobCard.vehicle_make_model} | {jobCard.customer_name}
+                    {jobCard.make} {jobCard.model} | {jobCard.client_name}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span
                     className="px-2 py-1 rounded text-xs font-medium"
                     style={{
-                      backgroundColor: `${getPriorityColor(jobCard.priority)}20`,
-                      color: getPriorityColor(jobCard.priority)
+                      backgroundColor: `${getStatusColor(jobCard.payment_status?.toUpperCase())}20`,
+                      color: getStatusColor(jobCard.payment_status?.toUpperCase())
                     }}
                   >
-                    {jobCard.priority}
+                    {jobCard.payment_status}
                   </span>
                   <span
                     className="px-2 py-1 rounded text-xs font-medium"
                     style={{
-                      backgroundColor: `${getStatusColor(jobCard.status)}20`,
-                      color: getStatusColor(jobCard.status)
+                      backgroundColor: `${getStatusColor(jobCard.status?.toUpperCase())}20`,
+                      color: getStatusColor(jobCard.status?.toUpperCase())
                     }}
                   >
                     {jobCard.status}
                   </span>
                 </div>
               </div>
-              <p className="text-sm mb-2" style={{ color: colors.textSecondary }}>
-                {jobCard.issue_description}
-              </p>
+              <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                <div style={{ color: colors.textSecondary }}>
+                  Mechanic: {jobCard.handled_by_mechanic || 'Not assigned'}
+                </div>
+                <div style={{ color: colors.textSecondary }}>
+                  Phone: {jobCard.client_phone}
+                </div>
+              </div>
               <div className="flex justify-between items-center text-xs" style={{ color: colors.textTertiary }}>
-                <span>Created: {jobCard.date_created}</span>
-                <span>Est. Cost: KSh {jobCard.estimated_cost.toLocaleString()}</span>
+                <span>Created: {new Date(jobCard.date_created).toLocaleDateString()}</span>
+                <span>Est. Cost: KSh {(jobCard.estimated_cost || 0).toLocaleString()}</span>
               </div>
             </div>
           ))}
@@ -387,10 +506,10 @@ export default function GarageManagementPage() {
                   Vehicle
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                  Customer
+                  Client
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                  Issue
+                  Mechanic
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                   Status
@@ -409,37 +528,44 @@ export default function GarageManagementPage() {
                   key={jobCard.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.3 }}
+                  transition={{ delay: index * 0.05, duration: 0.3 }}
                   className="border-b hover:bg-gray-50 transition-colors"
                   style={{ borderColor: colors.borderLight }}
                 >
                   <td className="py-3 px-4">
                     <div>
                       <div className="font-medium" style={{ color: colors.textPrimary }}>
-                        {jobCard.job_card_number || `JC-${String(jobCard.id).padStart(3, '0')}`}
+                        {jobCard.job_card_number}
                       </div>
                       <div className="text-xs" style={{ color: colors.textSecondary }}>
-                        {jobCard.date_created}
+                        {new Date(jobCard.date_created).toLocaleDateString()}
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-4">
                     <div>
                       <div className="font-medium" style={{ color: colors.textPrimary }}>
-                        {jobCard.vehicle_registration}
+                        {jobCard.registration_number}
                       </div>
                       <div className="text-sm" style={{ color: colors.textSecondary }}>
-                        {jobCard.vehicle_make_model}
+                        {jobCard.make} {jobCard.model}
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                    {jobCard.customer_name}
+                  <td className="py-3 px-4">
+                    <div>
+                      <div className="font-medium" style={{ color: colors.textPrimary }}>
+                        {jobCard.client_name}
+                      </div>
+                      <div className="text-xs" style={{ color: colors.textSecondary }}>
+                        {jobCard.client_phone}
+                      </div>
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <div className="max-w-xs">
-                      <p className="text-sm truncate" style={{ color: colors.textSecondary }}>
-                        {jobCard.issue_description}
+                      <p className="text-sm" style={{ color: colors.textSecondary }}>
+                        {jobCard.handled_by_mechanic || 'Not assigned'}
                       </p>
                     </div>
                   </td>
@@ -448,8 +574,8 @@ export default function GarageManagementPage() {
                       <span
                         className="px-2 py-1 rounded text-xs font-medium w-fit"
                         style={{
-                          backgroundColor: `${getStatusColor(jobCard.status)}20`,
-                          color: getStatusColor(jobCard.status)
+                          backgroundColor: `${getStatusColor(jobCard.status?.toUpperCase())}20`,
+                          color: getStatusColor(jobCard.status?.toUpperCase())
                         }}
                       >
                         {jobCard.status}
@@ -457,24 +583,22 @@ export default function GarageManagementPage() {
                       <span
                         className="px-2 py-1 rounded text-xs font-medium w-fit"
                         style={{
-                          backgroundColor: `${getPriorityColor(jobCard.priority)}20`,
-                          color: getPriorityColor(jobCard.priority)
+                          backgroundColor: `${getStatusColor(jobCard.payment_status?.toUpperCase())}20`,
+                          color: getStatusColor(jobCard.payment_status?.toUpperCase())
                         }}
                       >
-                        {jobCard.priority}
+                        {jobCard.payment_status}
                       </span>
                     </div>
                   </td>
                   <td className="py-3 px-4">
                     <div>
                       <div className="text-sm font-medium" style={{ color: colors.textPrimary }}>
-                        Est: KSh {jobCard.estimated_cost.toLocaleString()}
+                        Est: KSh {(jobCard.estimated_cost || 0).toLocaleString()}
                       </div>
-                      {jobCard.actual_cost && (
-                        <div className="text-xs" style={{ color: colors.textSecondary }}>
-                          Act: KSh {jobCard.actual_cost.toLocaleString()}
-                        </div>
-                      )}
+                      <div className="text-xs" style={{ color: colors.textSecondary }}>
+                        Total: KSh {(jobCard.total_job_value || 0).toLocaleString()}
+                      </div>
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -485,6 +609,13 @@ export default function GarageManagementPage() {
                         title="View Details"
                       >
                         <ClipboardList size={16} style={{ color: colors.adminPrimary }} />
+                      </button>
+                      <button
+                        onClick={() => window.location.href = `/admin/garage-management/job-card/${jobCard.id}/edit`}
+                        className="p-1 rounded hover:bg-gray-200 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit size={16} style={{ color: colors.adminAccent }} />
                       </button>
                     </div>
                   </td>
@@ -498,64 +629,378 @@ export default function GarageManagementPage() {
   )
 
   const renderEquipment = () => (
-    <DashboardCard
-      title="Garage Equipment"
-      subtitle="Manage tools and machinery"
-      action={
-        <button
-          onClick={() => {/* Add equipment */ }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: colors.adminPrimary }}
-        >
-          <Plus size={16} />
-          Add Equipment
-        </button>
-      }
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.isArray(equipment) && equipment.map((item, index) => (
+    <div className="space-y-6">
+      {/* Equipment Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="p-4 rounded-lg border" style={{ borderColor: colors.borderLight, backgroundColor: `${colors.adminPrimary}05` }}>
+          <div className="text-sm" style={{ color: colors.textSecondary }}>Total Equipment</div>
+          <div className="text-2xl font-bold" style={{ color: colors.adminPrimary }}>{equipment.length}</div>
+        </div>
+        <div className="p-4 rounded-lg border" style={{ borderColor: colors.borderLight, backgroundColor: `${colors.adminSuccess}05` }}>
+          <div className="text-sm" style={{ color: colors.textSecondary }}>Available</div>
+          <div className="text-2xl font-bold" style={{ color: colors.adminSuccess }}>
+            {equipment.filter(e => e.status === 'AVAILABLE').length}
+          </div>
+        </div>
+        <div className="p-4 rounded-lg border" style={{ borderColor: colors.borderLight, backgroundColor: `${colors.adminWarning}05` }}>
+          <div className="text-sm" style={{ color: colors.textSecondary }}>In Maintenance</div>
+          <div className="text-2xl font-bold" style={{ color: colors.adminWarning }}>
+            {equipment.filter(e => e.status === 'MAINTENANCE').length}
+          </div>
+        </div>
+        <div className="p-4 rounded-lg border" style={{ borderColor: colors.borderLight, backgroundColor: `${colors.adminAccent}05` }}>
+          <div className="text-sm" style={{ color: colors.textSecondary }}>Total Value</div>
+          <div className="text-2xl font-bold" style={{ color: colors.adminAccent }}>
+            KSh {equipment.reduce((acc, e) => acc + (e.cost || 0), 0).toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <DashboardCard
+        title="Garage Equipment"
+        subtitle="Manage tools and machinery"
+        action={
+          <button
+            onClick={openAddEquipmentModal}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: colors.adminPrimary }}
+          >
+            <Plus size={16} />
+            Add Equipment
+          </button>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.isArray(equipment) && equipment.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              className="p-4 rounded-lg border hover:shadow-md transition-shadow"
+              style={{ borderColor: colors.borderLight }}
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <h3 className="font-medium" style={{ color: colors.textPrimary }}>{item.name}</h3>
+                  <p className="text-sm line-clamp-2" style={{ color: colors.textSecondary }}>
+                    {item.description || 'No description'}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1 ml-2">
+                  <span
+                    className="px-2 py-1 rounded text-xs font-medium"
+                    style={{
+                      backgroundColor: `${getStatusColor(item.status)}20`,
+                      color: getStatusColor(item.status)
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                  <span
+                    className="px-2 py-1 rounded text-xs font-medium"
+                    style={{
+                      backgroundColor: `${getConditionColor(item.condition)}20`,
+                      color: getConditionColor(item.condition)
+                    }}
+                  >
+                    {item.condition}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1 mb-3">
+                {item.serial_number && (
+                  <div className="text-xs" style={{ color: colors.textTertiary }}>
+                    Serial: {item.serial_number}
+                  </div>
+                )}
+                {item.purchase_date && (
+                  <div className="text-xs" style={{ color: colors.textTertiary }}>
+                    Purchased: {new Date(item.purchase_date).toLocaleDateString()}
+                  </div>
+                )}
+                <div className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                  Value: KSh {(item.cost || 0).toLocaleString()}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t" style={{ borderColor: colors.borderLight }}>
+                <button
+                  onClick={() => openEditEquipmentModal(item)}
+                  className="p-2 rounded hover:bg-gray-100 transition-colors"
+                  title="Edit"
+                >
+                  <Edit size={16} style={{ color: colors.adminPrimary }} />
+                </button>
+                <button
+                  onClick={() => {
+                    setEquipmentToDelete(item)
+                    setShowDeleteEquipmentModal(true)
+                  }}
+                  className="p-2 rounded hover:bg-red-50 transition-colors"
+                  title="Delete"
+                >
+                  <Trash size={16} style={{ color: colors.adminError }} />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+          {(!Array.isArray(equipment) || equipment.length === 0) && (
+            <div className="col-span-full text-center py-8 text-gray-500">
+              <Wrench className="mx-auto mb-2 opacity-50" size={40} />
+              <p>No equipment found. Click "Add Equipment" to get started.</p>
+            </div>
+          )}
+        </div>
+      </DashboardCard>
+
+      {/* Equipment Add/Edit Modal */}
+      {showEquipmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <motion.div
-            key={item.id}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1, duration: 0.3 }}
-            className="p-4 rounded-lg border"
-            style={{ borderColor: colors.borderLight }}
+            className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex justify-between items-start mb-3">
+            <div className="flex justify-between items-start mb-4">
               <div>
-                <h3 className="font-medium" style={{ color: colors.textPrimary }}>{item.name}</h3>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>{item.description || item.condition || 'N/A'}</p>
+                <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+                  {editingEquipment ? 'Edit Equipment' : 'Add New Equipment'}
+                </h3>
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  {editingEquipment ? 'Update equipment details' : 'Register new equipment'}
+                </p>
               </div>
-              <span
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  backgroundColor: `${getStatusColor(item.status)}20`,
-                  color: getStatusColor(item.status)
+              <button
+                onClick={() => {
+                  setShowEquipmentModal(false)
+                  resetEquipmentForm()
                 }}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
               >
-                {item.status}
-              </span>
+                <X size={20} style={{ color: colors.textSecondary }} />
+              </button>
             </div>
-            {item.serial_number && (
-              <div className="text-xs" style={{ color: colors.textTertiary }}>
-                Serial: {item.serial_number}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                  Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={equipmentFormData.name}
+                  onChange={handleEquipmentFormChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ borderColor: colors.borderLight }}
+                  placeholder="e.g. Hydraulic Jack"
+                />
               </div>
-            )}
-            {item.purchase_date && (
-              <div className="text-xs" style={{ color: colors.textTertiary }}>
-                Purchased: {item.purchase_date}
+
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={equipmentFormData.description}
+                  onChange={handleEquipmentFormChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ borderColor: colors.borderLight }}
+                  placeholder="Equipment description..."
+                />
               </div>
-            )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                    Serial Number
+                  </label>
+                  <input
+                    type="text"
+                    name="serial_number"
+                    value={equipmentFormData.serial_number}
+                    onChange={handleEquipmentFormChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                    style={{ borderColor: colors.borderLight }}
+                    placeholder="e.g. SN-12345"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                    Purchase Date
+                  </label>
+                  <input
+                    type="date"
+                    name="purchase_date"
+                    value={equipmentFormData.purchase_date}
+                    onChange={handleEquipmentFormChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                    style={{ borderColor: colors.borderLight }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                  Cost (KSh)
+                </label>
+                <input
+                  type="number"
+                  name="cost"
+                  value={equipmentFormData.cost}
+                  onChange={handleEquipmentFormChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ borderColor: colors.borderLight }}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                    Condition
+                  </label>
+                  <select
+                    name="condition"
+                    value={equipmentFormData.condition}
+                    onChange={handleEquipmentFormChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                    style={{ borderColor: colors.borderLight }}
+                  >
+                    <option value="EXCELLENT">Excellent</option>
+                    <option value="GOOD">Good</option>
+                    <option value="FAIR">Fair</option>
+                    <option value="POOR">Poor</option>
+                    <option value="DAMAGED">Damaged</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={equipmentFormData.status}
+                    onChange={handleEquipmentFormChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                    style={{ borderColor: colors.borderLight }}
+                  >
+                    <option value="AVAILABLE">Available</option>
+                    <option value="IN_USE">In Use</option>
+                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="RETIRED">Retired</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  value={equipmentFormData.notes}
+                  onChange={handleEquipmentFormChange}
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                  style={{ borderColor: colors.borderLight }}
+                  placeholder="Additional notes..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowEquipmentModal(false)
+                  resetEquipmentForm()
+                }}
+                className="px-4 py-2 border rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                style={{ borderColor: colors.borderLight, color: colors.textPrimary }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEquipment}
+                disabled={savingEquipment}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ backgroundColor: colors.adminPrimary }}
+              >
+                {savingEquipment ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Save size={16} />
+                )}
+                {savingEquipment ? 'Saving...' : (editingEquipment ? 'Update' : 'Create')}
+              </button>
+            </div>
           </motion.div>
-        ))}
-        {!Array.isArray(equipment) || equipment.length === 0 && (
-          <div className="col-span-full text-center py-8 text-gray-500">
-            No equipment found.
-          </div>
-        )}
-      </div>
-    </DashboardCard>
+        </div>
+      )}
+
+      {/* Equipment Delete Confirmation Modal */}
+      {showDeleteEquipmentModal && equipmentToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+                  Delete Equipment
+                </h3>
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  This action cannot be undone
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteEquipmentModal(false)
+                  setEquipmentToDelete(null)
+                }}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+              >
+                <X size={20} style={{ color: colors.textSecondary }} />
+              </button>
+            </div>
+
+            <p className="mb-6" style={{ color: colors.textSecondary }}>
+              Are you sure you want to delete <span className="font-semibold">{equipmentToDelete.name}</span>?
+              This will permanently remove the equipment record.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteEquipmentModal(false)
+                  setEquipmentToDelete(null)
+                }}
+                className="px-4 py-2 border rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                style={{ borderColor: colors.borderLight, color: colors.textPrimary }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteEquipment}
+                disabled={deletingEquipment}
+                className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ backgroundColor: colors.adminError }}
+              >
+                {deletingEquipment ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
   )
 
   const renderReports = () => (

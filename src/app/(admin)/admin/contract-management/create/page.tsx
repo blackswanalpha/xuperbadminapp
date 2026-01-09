@@ -746,6 +746,7 @@ export default function CreateContractPage() {
                         style={{ borderColor: colors.borderLight }}
                         placeholder="client@example.com"
                         required={formData.isNewClient}
+                        maxLength={255}
                       />
                     </div>
 
@@ -761,6 +762,7 @@ export default function CreateContractPage() {
                         style={{ borderColor: colors.borderLight }}
                         placeholder="+254..."
                         required={formData.isNewClient}
+                        maxLength={30}
                       />
                     </div>
 
@@ -775,6 +777,7 @@ export default function CreateContractPage() {
                         className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-all"
                         style={{ borderColor: colors.borderLight }}
                         placeholder="National ID"
+                        maxLength={50}
                       />
                     </div>
 
@@ -902,6 +905,7 @@ export default function CreateContractPage() {
                     placeholder="National ID number"
                     readOnly={isClientDriver}
                     required
+                    maxLength={50}
                   />
                 </div>
 
@@ -917,6 +921,7 @@ export default function CreateContractPage() {
                     style={{ borderColor: colors.borderLight }}
                     placeholder="License number"
                     required
+                    maxLength={50}
                   />
                 </div>
 
@@ -975,6 +980,7 @@ export default function CreateContractPage() {
                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-all"
                     style={{ borderColor: colors.borderLight }}
                     placeholder="+254..."
+                    maxLength={30}
                   />
                 </div>
 
@@ -989,6 +995,7 @@ export default function CreateContractPage() {
                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-all"
                     style={{ borderColor: colors.borderLight }}
                     placeholder="National ID number"
+                    maxLength={50}
                   />
                 </div>
 

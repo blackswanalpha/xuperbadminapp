@@ -523,7 +523,13 @@ export default function VehicleDetailsPage() {
                             {payment.transaction_id || `TXN-${payment.id}`}
                           </td>
                           <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                            {payment.client?.first_name} {payment.client?.last_name || payment.client?.email}
+                            {typeof payment.client === 'object' ? (
+                              <>
+                                {payment.client.first_name} {payment.client.last_name || payment.client.email}
+                              </>
+                            ) : (
+                              payment.client_name || 'N/A'
+                            )}
                           </td>
                           <td className="py-3 px-4 font-medium" style={{ color: colors.adminSuccess }}>
                             KSh {Number(payment.amount).toLocaleString()}

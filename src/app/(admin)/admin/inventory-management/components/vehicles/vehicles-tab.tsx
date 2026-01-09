@@ -249,9 +249,7 @@ export default function VehiclesTab() {
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Condition
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Location
-                    </th>
+
                     <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
                       Current Value
                     </th>
@@ -278,9 +276,6 @@ export default function VehiclesTab() {
                           <h4 className="font-medium" style={{ color: colors.textPrimary }}>
                             {vehicle.year} {vehicle.make} {vehicle.model}
                           </h4>
-                          <p className="text-sm" style={{ color: colors.textSecondary }}>
-                            {vehicle.category}
-                          </p>
                         </div>
                       </td>
                       <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
@@ -297,9 +292,7 @@ export default function VehiclesTab() {
                           {vehicle.condition}
                         </span>
                       </td>
-                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {vehicle.location}
-                      </td>
+
                       <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
                         {formatCurrency(vehicle.current_value)}
                       </td>

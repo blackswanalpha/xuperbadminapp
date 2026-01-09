@@ -7,7 +7,6 @@ import { colors } from '@/lib/theme/colors'
 import {
   fetchInventoryItem,
   updateInventoryItem,
-  fetchInventoryLocations,
 } from '@/lib/api'
 import {
   InventoryItem,
@@ -21,7 +20,6 @@ interface EditInventoryModalProps {
 
 export default function EditInventoryModal({ vehicleId, onClose, onUpdate }: EditInventoryModalProps) {
   const [inventoryItem, setInventoryItem] = useState<InventoryItem | null>(null)
-  const [locations, setLocations] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +27,6 @@ export default function EditInventoryModal({ vehicleId, onClose, onUpdate }: Edi
   // Form data
   const [formData, setFormData] = useState({
     condition: '',
-    location: '',
     purchase_date: '',
     purchase_price: '',
     current_value: '',
@@ -47,18 +44,13 @@ export default function EditInventoryModal({ vehicleId, onClose, onUpdate }: Edi
       setLoading(true)
       setError(null)
 
-      const [itemData, locationsData] = await Promise.all([
-        fetchInventoryItem(vehicleId),
-        fetchInventoryLocations(),
-      ])
+      const itemData = await fetchInventoryItem(vehicleId)
 
       setInventoryItem(itemData)
-      setLocations(locationsData.locations)
 
       // Populate form data
       setFormData({
         condition: itemData.condition || '',
-        location: itemData.location || '',
         purchase_date: itemData.purchase_date || '',
         purchase_price: itemData.purchase_price || '',
         current_value: itemData.current_value || '',
@@ -90,7 +82,6 @@ export default function EditInventoryModal({ vehicleId, onClose, onUpdate }: Edi
 
       const updateData = {
         condition: formData.condition as 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR',
-        location: formData.location,
         purchase_date: formData.purchase_date || null,
         purchase_price: formData.purchase_price || null,
         current_value: formData.current_value || null,
@@ -189,25 +180,7 @@ export default function EditInventoryModal({ vehicleId, onClose, onUpdate }: Edi
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-                      Location *
-                    </label>
-                    <select
-                      value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      required
-                      className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <option value="">Select Location</option>
-                      {locations.map((location) => (
-                        <option key={location} value={location}>
-                          {location}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+
                 </div>
               </div>
 

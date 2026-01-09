@@ -22,7 +22,7 @@ const createEquipmentColumns = (onDelete: (equipment: Equipment) => void): Colum
         header: 'Equipment Details',
         cell: ({ row }) => (
             <div className="flex items-center gap-3">
-                <div 
+                <div
                     className="p-2 rounded-lg"
                     style={{ backgroundColor: `${colors.supervisorPrimary}15` }}
                 >
@@ -53,9 +53,8 @@ const createEquipmentColumns = (onDelete: (equipment: Equipment) => void): Colum
                 'DAMAGED': 'bg-red-100 text-red-800 border-red-200'
             };
             return (
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                    conditionColors[condition as keyof typeof conditionColors] || 'bg-gray-100 text-gray-800 border-gray-200'
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${conditionColors[condition as keyof typeof conditionColors] || 'bg-gray-100 text-gray-800 border-gray-200'
+                    }`}>
                     {condition}
                 </span>
             )
@@ -74,7 +73,7 @@ const createEquipmentColumns = (onDelete: (equipment: Equipment) => void): Colum
             };
             const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.AVAILABLE;
             const StatusIcon = config.icon;
-            
+
             return (
                 <div className="flex items-center gap-2">
                     <StatusIcon size={14} className={`${config.color.split(' ')[1]} text-current`} />
@@ -153,7 +152,7 @@ export default function GarageEquipmentPage() {
         const loadData = async () => {
             try {
                 const result = await fetchEquipmentList()
-                setData(result)
+                setData(result.results || [])
             } catch (error) {
                 console.error('Error loading equipment:', error)
                 toast({
@@ -183,15 +182,15 @@ export default function GarageEquipmentPage() {
 
         try {
             await deleteEquipment(deleteModal.equipment.id)
-            
+
             // Remove from local state
             setData(prevData => prevData.filter(e => e.id !== deleteModal.equipment?.id))
-            
+
             toast({
                 title: "Success",
                 description: "Equipment deleted successfully",
             })
-            
+
             setDeleteModal({
                 isOpen: false,
                 equipment: null,
@@ -204,7 +203,7 @@ export default function GarageEquipmentPage() {
                 description: error.response?.data?.detail || "Failed to delete equipment. Please try again.",
                 variant: "destructive"
             })
-            
+
             setDeleteModal(prev => ({ ...prev, isDeleting: false }))
         }
     }
@@ -248,7 +247,7 @@ export default function GarageEquipmentPage() {
                     </p>
                 </div>
                 <Link href="/supervisor/garage/equipment/add">
-                    <Button 
+                    <Button
                         className="flex items-center gap-2 text-white hover:opacity-90"
                         style={{ backgroundColor: colors.supervisorPrimary }}
                     >
@@ -295,7 +294,7 @@ export default function GarageEquipmentPage() {
                             <span className="text-sm font-medium">Excellent</span>
                             <div className="flex items-center gap-2">
                                 <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div 
+                                    <div
                                         className="h-2 bg-green-500 rounded-full"
                                         style={{ width: `${stats.total_equipment > 0 ? (stats.excellent_condition / stats.total_equipment) * 100 : 0}%` }}
                                     />
@@ -307,7 +306,7 @@ export default function GarageEquipmentPage() {
                             <span className="text-sm font-medium">Good</span>
                             <div className="flex items-center gap-2">
                                 <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div 
+                                    <div
                                         className="h-2 bg-blue-500 rounded-full"
                                         style={{ width: `${stats.total_equipment > 0 ? (stats.good_condition / stats.total_equipment) * 100 : 0}%` }}
                                     />
@@ -319,7 +318,7 @@ export default function GarageEquipmentPage() {
                             <span className="text-sm font-medium">Needs Attention</span>
                             <div className="flex items-center gap-2">
                                 <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div 
+                                    <div
                                         className="h-2 bg-orange-500 rounded-full"
                                         style={{ width: `${stats.total_equipment > 0 ? (stats.needs_attention / stats.total_equipment) * 100 : 0}%` }}
                                     />
@@ -354,7 +353,7 @@ export default function GarageEquipmentPage() {
                 <DashboardCard title="Quick Actions">
                     <div className="space-y-3">
                         <Link href="/supervisor/garage/equipment/add">
-                            <Button 
+                            <Button
                                 className="w-full justify-start text-white"
                                 style={{ backgroundColor: colors.supervisorPrimary }}
                             >
@@ -362,8 +361,8 @@ export default function GarageEquipmentPage() {
                                 Add New Equipment
                             </Button>
                         </Link>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="w-full justify-start"
                             onClick={() => window.location.reload()}
                         >
@@ -371,8 +370,8 @@ export default function GarageEquipmentPage() {
                             Refresh Data
                         </Button>
                         {stats.needs_attention > 0 && (
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 className="w-full justify-start border-orange-200 text-orange-700"
                             >
                                 <AlertTriangle size={16} className="mr-2" />
@@ -397,8 +396,8 @@ export default function GarageEquipmentPage() {
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Equipment Found</h3>
                         <p className="text-gray-500 mb-6">Get started by adding your first piece of equipment</p>
                         <Link href="/supervisor/garage/equipment/add">
-                            <Button 
-                                style={{ backgroundColor: colors.supervisorPrimary }} 
+                            <Button
+                                style={{ backgroundColor: colors.supervisorPrimary }}
                                 className="text-white"
                             >
                                 <Plus className="mr-2 h-4 w-4" />
