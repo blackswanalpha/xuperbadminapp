@@ -192,7 +192,7 @@ export default function UserDetailsPage() {
   const fetchSupervisorSpecificData = async (supervisorId: string) => {
     try {
       // Supervisors would have broader access to data
-      const supervisorContracts = await fetchAllContracts({ limit: 50 })
+      const supervisorContracts = await fetchAllContracts({ page_size: 50 })
       setContracts(supervisorContracts)
     } catch (err) {
       console.warn('Contracts data not available for supervisor:', err)
@@ -204,7 +204,7 @@ export default function UserDetailsPage() {
   const fetchAdminSpecificData = async (adminId: string) => {
     try {
       // Admins have access to all data
-      const allContracts = await fetchAllContracts({ limit: 100 })
+      const allContracts = await fetchAllContracts({ page_size: 100 })
       setContracts(allContracts)
     } catch (err) {
       console.warn('Contracts data not available for admin:', err)

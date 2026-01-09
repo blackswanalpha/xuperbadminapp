@@ -1266,12 +1266,13 @@ export const fetchPendingContracts = async (): Promise<Contract[]> => {
     }
 };
 
-export const fetchAllContracts = async (filters?: { status?: string; search?: string; limit?: number }): Promise<Contract[]> => {
+export const fetchAllContracts = async (filters?: { status?: string; search?: string; page_size?: number }): Promise<Contract[]> => {
     try {
         const params = new URLSearchParams();
         if (filters?.status) params.append('status', filters.status);
         if (filters?.search) params.append('search', filters.search);
-        if (filters?.limit) params.append('limit', filters.limit.toString());
+        // Use page_size parameter (backend's pagination param) - default to 1000 to get all contracts
+        params.append('page_size', (filters?.page_size || 1000).toString());
 
         const response = await api.get(`contracts/?${params.toString()}`);
         return response.data.results || response.data;
