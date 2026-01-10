@@ -737,6 +737,138 @@ export const fetchIncomeBreakdown = async (days: number = 30): Promise<{
     }
 };
 
+// Unified Income Types and Functions
+export interface UnifiedIncomeRecord {
+    id: string;
+    type: 'contract_payment' | 'contract_deposit' | 'job_card_payment';
+    source_id: string;
+    source_reference: string;
+    client_name: string;
+    amount: number;
+    method?: string;
+    status: string;
+    date: string;
+    vehicle_registration?: string;
+    transaction_id?: string | null;
+}
+
+export interface UnifiedIncomeResponse {
+    results: UnifiedIncomeRecord[];
+    count: number;
+    total_amount: number;
+    type_breakdown: {
+        [key: string]: {
+            count: number;
+            total_amount: number;
+        };
+    };
+    next: string | null;
+    previous: string | null;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
+
+export const fetchUnifiedIncome = async (
+    filters?: { search?: string; type?: string; status?: string },
+    page = 1,
+    pageSize = 10
+): Promise<UnifiedIncomeResponse> => {
+    try {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
+        if (filters?.search) params.append('search', filters.search);
+        if (filters?.type) params.append('type', filters.type);
+        if (filters?.status) params.append('status', filters.status);
+
+        const response = await api.get<UnifiedIncomeResponse>(`/accounting/all-income/?${params.toString()}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching unified income:', error);
+        throw error;
+    }
+};
+
+// Paginated Expenses Types and Functions
+export interface PaginatedExpensesResponse {
+    results: Expense[];
+    count: number;
+    total_amount: number;
+    next: string | null;
+    previous: string | null;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
+
+export const fetchAllExpensesPaginated = async (
+    filters?: { search?: string; status?: string; category?: string },
+    page = 1,
+    pageSize = 10
+): Promise<PaginatedExpensesResponse> => {
+    try {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('page_size', pageSize.toString());
+
+        if (filters?.search) params.append('search', filters.search);
+        if (filters?.status) params.append('status', filters.status);
+        if (filters?.category) params.append('category', filters.category);
+
+        const response = await api.get<any>(`/expenses/all-expenses/?${params.toString()}`);
+
+        // Handle new paginated response format
+        if (response.data.results) {
+            return {
+                results: response.data.results.map((item: any) => ({
+                    id: item.id,
+                    type: item.type,
+                    category: item.category,
+                    description: item.notes || item.item_name || item.type,
+                    amount: item.total_amount,
+                    status: item.status,
+                    date: item.created_at,
+                    vehicle_registration: item.vehicle_registration,
+                })),
+                count: response.data.count,
+                total_amount: response.data.total_amount,
+                next: response.data.next,
+                previous: response.data.previous,
+                page: response.data.page,
+                page_size: response.data.page_size,
+                total_pages: response.data.total_pages,
+            };
+        }
+
+        // Fallback for old response format
+        const items = Array.isArray(response.data) ? response.data : [];
+        return {
+            results: items.map((item: any) => ({
+                id: item.id,
+                type: item.type,
+                category: item.category,
+                description: item.notes || item.item_name || item.type,
+                amount: item.total_amount,
+                status: item.status,
+                date: item.created_at,
+                vehicle_registration: item.vehicle_registration,
+            })),
+            count: items.length,
+            total_amount: items.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0),
+            next: null,
+            previous: null,
+            page: 1,
+            page_size: items.length,
+            total_pages: 1,
+        };
+    } catch (error) {
+        console.error('Error fetching paginated expenses:', error);
+        throw error;
+    }
+};
+
 export const fetchVehiclesForSelect = async (): Promise<Vehicle[]> => {
     try {
         // Fetch a large number of vehicles for dropdown

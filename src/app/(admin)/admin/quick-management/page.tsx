@@ -28,12 +28,18 @@ import {
   fetchAllExpenses,
   fetchFinancialAnalysis,
   fetchRecentActivities,
+  fetchUnifiedIncome,
+  fetchAllExpensesPaginated,
   Payment,
   Expense,
   FinancialAnalysis,
   RecentActivitiesResponse,
-  Activity
+  Activity,
+  UnifiedIncomeRecord,
+  UnifiedIncomeResponse,
+  PaginatedExpensesResponse,
 } from '@/lib/api'
+import { Pagination } from '@/components/shared/pagination'
 
 export default function QuickManagementPage() {
   const router = useRouter()
@@ -44,6 +50,23 @@ export default function QuickManagementPage() {
   const [financialAnalysis, setFinancialAnalysis] = useState<FinancialAnalysis | null>(null)
   const [recentActivities, setRecentActivities] = useState<Activity[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Unified Income State
+  const [unifiedIncome, setUnifiedIncome] = useState<UnifiedIncomeRecord[]>([])
+  const [incomeTypeFilter, setIncomeTypeFilter] = useState<string>('')
+  const [incomePage, setIncomePage] = useState(1)
+  const [incomePageSize, setIncomePageSize] = useState(10)
+  const [incomeCount, setIncomeCount] = useState(0)
+  const [incomeTotalAmount, setIncomeTotalAmount] = useState(0)
+  const [incomeTypeBreakdown, setIncomeTypeBreakdown] = useState<{[key: string]: {count: number; total_amount: number}}>({})
+  const [isLoadingIncome, setIsLoadingIncome] = useState(false)
+
+  // Expense Pagination State
+  const [expensePage, setExpensePage] = useState(1)
+  const [expensePageSize, setExpensePageSize] = useState(10)
+  const [expenseCount, setExpenseCount] = useState(0)
+  const [expenseTotalAmount, setExpenseTotalAmount] = useState(0)
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     type: 'income' | 'expense' | null
@@ -57,20 +80,69 @@ export default function QuickManagementPage() {
   })
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Load unified income data
+  const loadUnifiedIncome = async (page = 1, pageSize = 10, type = '', search = '') => {
+    setIsLoadingIncome(true)
+    try {
+      const filters: { search?: string; type?: string } = {}
+      if (search) filters.search = search
+      if (type) filters.type = type
+
+      const data = await fetchUnifiedIncome(filters, page, pageSize)
+      setUnifiedIncome(data.results)
+      setIncomeCount(data.count)
+      setIncomeTotalAmount(data.total_amount)
+      setIncomeTypeBreakdown(data.type_breakdown)
+      setIncomePage(data.page)
+    } catch (error) {
+      console.error('Failed to load unified income:', error)
+    } finally {
+      setIsLoadingIncome(false)
+    }
+  }
+
+  // Load paginated expenses
+  const loadExpenses = async (page = 1, pageSize = 10, search = '') => {
+    setIsLoadingExpenses(true)
+    try {
+      const filters: { search?: string } = {}
+      if (search) filters.search = search
+
+      const data = await fetchAllExpensesPaginated(filters, page, pageSize)
+      setExpenses(data.results)
+      setExpenseCount(data.count)
+      setExpenseTotalAmount(data.total_amount)
+      setExpensePage(data.page)
+    } catch (error) {
+      console.error('Failed to load expenses:', error)
+    } finally {
+      setIsLoadingExpenses(false)
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
       try {
-        const [paymentsData, expensesData, analysisData, activitiesData] = await Promise.all([
+        const [paymentsData, expensesData, analysisData, activitiesData, unifiedIncomeData] = await Promise.all([
           fetchPayments(),
-          fetchAllExpenses(),
+          fetchAllExpensesPaginated({}, 1, expensePageSize),
           fetchFinancialAnalysis(),
-          fetchRecentActivities()
+          fetchRecentActivities(),
+          fetchUnifiedIncome({}, 1, incomePageSize)
         ])
         setIncome(paymentsData.payments || [])
-        setExpenses(expensesData || [])
+        setExpenses(expensesData.results || [])
+        setExpenseCount(expensesData.count)
+        setExpenseTotalAmount(expensesData.total_amount)
         setFinancialAnalysis(analysisData)
         setRecentActivities(activitiesData.activities || [])
+
+        // Set unified income data
+        setUnifiedIncome(unifiedIncomeData.results)
+        setIncomeCount(unifiedIncomeData.count)
+        setIncomeTotalAmount(unifiedIncomeData.total_amount)
+        setIncomeTypeBreakdown(unifiedIncomeData.type_breakdown)
       } catch (error) {
         console.error('Failed to load quick management data', error)
       } finally {
@@ -173,26 +245,31 @@ export default function QuickManagementPage() {
   }
 
   const renderDashboardTab = () => {
+    // Calculate income breakdown from unified income data
+    const contractPaymentsTotal = incomeTypeBreakdown.contract_payment?.total_amount || 0
+    const contractDepositsTotal = incomeTypeBreakdown.contract_deposit?.total_amount || 0
+    const jobCardPaymentsTotal = incomeTypeBreakdown.job_card_payment?.total_amount || 0
+
     const dashboardStats = [
       {
         title: 'Total Income',
-        value: formatCurrency(totalRevenue),
+        value: formatCurrency(incomeTotalAmount || totalRevenue),
         icon: DollarSign,
-        trend: { value: `${totalIncome} payments`, isPositive: true },
+        trend: { value: `${incomeCount || totalIncome} records`, isPositive: true },
         color: colors.adminPrimary,
       },
       {
         title: 'Total Expenses',
-        value: formatCurrency(totalExpensesAmount),
+        value: formatCurrency(expenseTotalAmount || totalExpensesAmount),
         icon: Wrench,
-        trend: { value: `${expensesList.length} items`, isPositive: false },
+        trend: { value: `${expenseCount || expensesList.length} items`, isPositive: false },
         color: colors.adminError,
       },
       {
         title: 'Net Revenue',
-        value: formatCurrency(netRevenue),
+        value: formatCurrency((incomeTotalAmount || totalRevenue) - (expenseTotalAmount || totalExpensesAmount)),
         icon: TrendingUp,
-        trend: { value: netRevenue > 0 ? 'Profit' : 'Loss', isPositive: netRevenue > 0 },
+        trend: { value: ((incomeTotalAmount || totalRevenue) - (expenseTotalAmount || totalExpensesAmount)) > 0 ? 'Profit' : 'Loss', isPositive: ((incomeTotalAmount || totalRevenue) - (expenseTotalAmount || totalExpensesAmount)) > 0 },
         color: colors.adminSuccess,
       },
       {
@@ -219,6 +296,84 @@ export default function QuickManagementPage() {
             </motion.div>
           ))}
         </div>
+
+        {/* Income Breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mb-8"
+        >
+          <DashboardCard title="Income Breakdown" subtitle="Revenue by source type">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Contract Payments */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminSuccess}10` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium" style={{ color: colors.textSecondary }}>Contract Payments</span>
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${colors.adminSuccess}20`, color: colors.adminSuccess }}>
+                    {incomeTypeBreakdown.contract_payment?.count || 0} records
+                  </span>
+                </div>
+                <div className="text-2xl font-bold" style={{ color: colors.adminSuccess }}>
+                  {formatCurrency(contractPaymentsTotal)}
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${incomeTotalAmount > 0 ? (contractPaymentsTotal / incomeTotalAmount) * 100 : 0}%`,
+                      backgroundColor: colors.adminSuccess
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Contract Deposits */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminWarning}10` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium" style={{ color: colors.textSecondary }}>Contract Deposits</span>
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${colors.adminWarning}20`, color: colors.adminWarning }}>
+                    {incomeTypeBreakdown.contract_deposit?.count || 0} records
+                  </span>
+                </div>
+                <div className="text-2xl font-bold" style={{ color: colors.adminWarning }}>
+                  {formatCurrency(contractDepositsTotal)}
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${incomeTotalAmount > 0 ? (contractDepositsTotal / incomeTotalAmount) * 100 : 0}%`,
+                      backgroundColor: colors.adminWarning
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Job Card Payments */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: `${colors.adminAccent}10` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium" style={{ color: colors.textSecondary }}>Job Card Payments</span>
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${colors.adminAccent}20`, color: colors.adminAccent }}>
+                    {incomeTypeBreakdown.job_card_payment?.count || 0} records
+                  </span>
+                </div>
+                <div className="text-2xl font-bold" style={{ color: colors.adminAccent }}>
+                  {formatCurrency(jobCardPaymentsTotal)}
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${incomeTotalAmount > 0 ? (jobCardPaymentsTotal / incomeTotalAmount) * 100 : 0}%`,
+                      backgroundColor: colors.adminAccent
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </DashboardCard>
+        </motion.div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -492,13 +647,6 @@ export default function QuickManagementPage() {
   }
 
   const renderExpensesTab = () => {
-    const filteredExpenses = expensesList.filter(
-      (expense) =>
-        expense.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (expense.description && expense.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (expense.vehicle_registration && expense.vehicle_registration.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
-
     return (
       <TabPanel>
         <motion.div
@@ -508,7 +656,7 @@ export default function QuickManagementPage() {
         >
           <DashboardCard
             title="All Expenses"
-            subtitle={`${filteredExpenses.length} expenses found`}
+            subtitle={`${expenseCount} expenses found | Total: ${formatCurrency(expenseTotalAmount)}`}
             action={
               <div className="flex items-center gap-2">
                 <div className="relative">
@@ -522,10 +670,26 @@ export default function QuickManagementPage() {
                     placeholder="Search expenses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setExpensePage(1)
+                        loadExpenses(1, expensePageSize, searchQuery)
+                      }
+                    }}
                     className="pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all text-sm"
                     style={{ borderColor: colors.borderLight }}
                   />
                 </div>
+                <button
+                  onClick={() => {
+                    setExpensePage(1)
+                    loadExpenses(1, expensePageSize, searchQuery)
+                  }}
+                  className="px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors text-sm"
+                  style={{ borderColor: colors.borderLight, color: colors.textSecondary }}
+                >
+                  Search
+                </button>
                 <button
                   onClick={() => router.push('/admin/quick-management/expenses/create')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-opacity"
@@ -537,127 +701,151 @@ export default function QuickManagementPage() {
               </div>
             }
           >
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: colors.borderLight }}>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Expense ID
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Category
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Description
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Amount
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Date
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredExpenses.map((expense, index) => (
-                    <motion.tr
-                      key={expense.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 + index * 0.05, duration: 0.5 }}
-                      className="border-b hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
-                        {expense.id}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor:
-                              expense.category === 'Service'
-                                ? `${colors.adminPrimary}20`
-                                : expense.category === 'Bodywork'
-                                  ? `${colors.adminWarning}20`
-                                  : `${colors.adminAccent}20`,
-                            color:
-                              expense.category === 'Service'
-                                ? colors.adminPrimary
-                                : expense.category === 'Bodywork'
-                                  ? colors.adminWarning
-                                  : colors.adminAccent,
-                          }}
+            {isLoadingExpenses ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: colors.adminPrimary }} />
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b" style={{ borderColor: colors.borderLight }}>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Expense ID
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Category
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Description
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Amount
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Status
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Date
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expensesList.map((expense, index) => (
+                        <motion.tr
+                          key={expense.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 + index * 0.02, duration: 0.3 }}
+                          className="border-b hover:bg-gray-50 transition-colors"
+                          style={{ borderColor: colors.borderLight }}
                         >
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {expense.description || 'N/A'}
-                      </td>
-                      <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(expense.amount)}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor:
-                              expense.status.toLowerCase() === 'approved'
-                                ? `${colors.adminSuccess}20`
-                                : expense.status.toLowerCase() === 'pending'
-                                  ? `${colors.adminWarning}20`
-                                  : `${colors.adminError}20`,
-                            color:
-                              expense.status.toLowerCase() === 'approved'
-                                ? colors.adminSuccess
-                                : expense.status.toLowerCase() === 'pending'
-                                  ? colors.adminWarning
-                                  : colors.adminError,
-                          }}
-                        >
-                          {expense.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {expense.date}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => router.push(`/admin/quick-management/expenses/${expense.id}`)}
-                            className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="View"
-                          >
-                            <Eye size={16} style={{ color: colors.textSecondary }} />
-                          </button>
-                          <button
-                            onClick={() => router.push(`/admin/quick-management/expenses/${expense.id}/edit`)}
-                            className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit size={16} style={{ color: colors.adminPrimary }} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteExpense(expense.id)}
-                            className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} style={{ color: colors.adminError }} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <td className="py-3 px-4 font-medium text-sm" style={{ color: colors.textPrimary }}>
+                            {expense.id.substring(0, 8)}...
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className="px-3 py-1 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor:
+                                  expense.category === 'Service'
+                                    ? `${colors.adminPrimary}20`
+                                    : expense.category === 'Bodywork'
+                                      ? `${colors.adminWarning}20`
+                                      : `${colors.adminAccent}20`,
+                                color:
+                                  expense.category === 'Service'
+                                    ? colors.adminPrimary
+                                    : expense.category === 'Bodywork'
+                                      ? colors.adminWarning
+                                      : colors.adminAccent,
+                              }}
+                            >
+                              {expense.category}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
+                            {expense.description || 'N/A'}
+                          </td>
+                          <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
+                            {formatCurrency(expense.amount)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className="px-3 py-1 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor:
+                                  expense.status.toLowerCase() === 'approved'
+                                    ? `${colors.adminSuccess}20`
+                                    : expense.status.toLowerCase() === 'pending'
+                                      ? `${colors.adminWarning}20`
+                                      : `${colors.adminError}20`,
+                                color:
+                                  expense.status.toLowerCase() === 'approved'
+                                    ? colors.adminSuccess
+                                    : expense.status.toLowerCase() === 'pending'
+                                      ? colors.adminWarning
+                                      : colors.adminError,
+                              }}
+                            >
+                              {expense.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
+                            {expense.date ? new Date(expense.date).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => router.push(`/admin/quick-management/expenses/${expense.id}`)}
+                                className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                title="View"
+                              >
+                                <Eye size={16} style={{ color: colors.textSecondary }} />
+                              </button>
+                              <button
+                                onClick={() => router.push(`/admin/quick-management/expenses/${expense.id}/edit`)}
+                                className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                title="Edit"
+                              >
+                                <Edit size={16} style={{ color: colors.adminPrimary }} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} style={{ color: colors.adminError }} />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <Pagination
+                  currentPage={expensePage}
+                  totalCount={expenseCount}
+                  pageSize={expensePageSize}
+                  onPageChange={(page) => {
+                    setExpensePage(page)
+                    loadExpenses(page, expensePageSize, searchQuery)
+                  }}
+                  onPageSizeChange={(size) => {
+                    setExpensePageSize(size)
+                    setExpensePage(1)
+                    loadExpenses(1, size, searchQuery)
+                  }}
+                />
+              </>
+            )}
           </DashboardCard>
         </motion.div>
       </TabPanel>
@@ -665,25 +853,24 @@ export default function QuickManagementPage() {
   }
 
   const renderIncomeTab = () => {
-    const filteredIncome = incomeList.filter(
-      (payment) =>
-        payment.id.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (payment.client_name && payment.client_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (payment.contract_number && payment.contract_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (typeof payment.client === 'object' && payment.client.email && payment.client.email.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
-
-    const getClientName = (payment: Payment) => {
-      if (payment.client_name) return payment.client_name
-      if (typeof payment.client === 'object') {
-        const name = `${payment.client.first_name || ''} ${payment.client.last_name || ''}`.trim()
-        return name || payment.client.email
+    const getIncomeTypeBadge = (type: string) => {
+      switch (type) {
+        case 'contract_payment':
+          return { label: 'Payment', color: colors.adminSuccess }
+        case 'contract_deposit':
+          return { label: 'Deposit', color: colors.adminWarning }
+        case 'job_card_payment':
+          return { label: 'Job Card', color: colors.adminAccent }
+        default:
+          return { label: type, color: colors.adminPrimary }
       }
-      return 'Client'
     }
 
-    const getPaymentAmount = (payment: Payment) => {
-      return typeof payment.amount === 'number' ? payment.amount : parseFloat(payment.amount) || 0
+    const getStatusColor = (status: string) => {
+      const s = status.toUpperCase()
+      if (s === 'SUCCESS' || s === 'ACTIVE' || s === 'COMPLETED') return colors.adminSuccess
+      if (s === 'PENDING') return colors.adminWarning
+      return colors.adminError
     }
 
     return (
@@ -693,9 +880,104 @@ export default function QuickManagementPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
+          {/* Income Type Breakdown Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md"
+              style={{
+                borderColor: !incomeTypeFilter ? colors.adminPrimary : colors.borderLight,
+                backgroundColor: !incomeTypeFilter ? `${colors.adminPrimary}10` : 'white'
+              }}
+              onClick={() => {
+                setIncomeTypeFilter('')
+                setIncomePage(1)
+                loadUnifiedIncome(1, incomePageSize, '', searchQuery)
+              }}
+            >
+              <div className="text-sm font-medium" style={{ color: colors.textSecondary }}>All Income</div>
+              <div className="text-xl font-bold" style={{ color: colors.adminPrimary }}>{formatCurrency(incomeTotalAmount)}</div>
+              <div className="text-xs" style={{ color: colors.textTertiary }}>{incomeCount} records</div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+              className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md"
+              style={{
+                borderColor: incomeTypeFilter === 'contract_payment' ? colors.adminSuccess : colors.borderLight,
+                backgroundColor: incomeTypeFilter === 'contract_payment' ? `${colors.adminSuccess}10` : 'white'
+              }}
+              onClick={() => {
+                setIncomeTypeFilter('contract_payment')
+                setIncomePage(1)
+                loadUnifiedIncome(1, incomePageSize, 'contract_payment', searchQuery)
+              }}
+            >
+              <div className="text-sm font-medium" style={{ color: colors.textSecondary }}>Contract Payments</div>
+              <div className="text-xl font-bold" style={{ color: colors.adminSuccess }}>
+                {formatCurrency(incomeTypeBreakdown.contract_payment?.total_amount || 0)}
+              </div>
+              <div className="text-xs" style={{ color: colors.textTertiary }}>
+                {incomeTypeBreakdown.contract_payment?.count || 0} records
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md"
+              style={{
+                borderColor: incomeTypeFilter === 'contract_deposit' ? colors.adminWarning : colors.borderLight,
+                backgroundColor: incomeTypeFilter === 'contract_deposit' ? `${colors.adminWarning}10` : 'white'
+              }}
+              onClick={() => {
+                setIncomeTypeFilter('contract_deposit')
+                setIncomePage(1)
+                loadUnifiedIncome(1, incomePageSize, 'contract_deposit', searchQuery)
+              }}
+            >
+              <div className="text-sm font-medium" style={{ color: colors.textSecondary }}>Contract Deposits</div>
+              <div className="text-xl font-bold" style={{ color: colors.adminWarning }}>
+                {formatCurrency(incomeTypeBreakdown.contract_deposit?.total_amount || 0)}
+              </div>
+              <div className="text-xs" style={{ color: colors.textTertiary }}>
+                {incomeTypeBreakdown.contract_deposit?.count || 0} records
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.25 }}
+              className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md"
+              style={{
+                borderColor: incomeTypeFilter === 'job_card_payment' ? colors.adminAccent : colors.borderLight,
+                backgroundColor: incomeTypeFilter === 'job_card_payment' ? `${colors.adminAccent}10` : 'white'
+              }}
+              onClick={() => {
+                setIncomeTypeFilter('job_card_payment')
+                setIncomePage(1)
+                loadUnifiedIncome(1, incomePageSize, 'job_card_payment', searchQuery)
+              }}
+            >
+              <div className="text-sm font-medium" style={{ color: colors.textSecondary }}>Job Card Payments</div>
+              <div className="text-xl font-bold" style={{ color: colors.adminAccent }}>
+                {formatCurrency(incomeTypeBreakdown.job_card_payment?.total_amount || 0)}
+              </div>
+              <div className="text-xs" style={{ color: colors.textTertiary }}>
+                {incomeTypeBreakdown.job_card_payment?.count || 0} records
+              </div>
+            </motion.div>
+          </div>
+
           <DashboardCard
-            title="All Income"
-            subtitle={`${filteredIncome.length} payments found`}
+            title="Income Records"
+            subtitle={`${incomeCount} records found | Total: ${formatCurrency(incomeTotalAmount)}`}
             action={
               <div className="flex items-center gap-2">
                 <div className="relative">
@@ -709,125 +991,177 @@ export default function QuickManagementPage() {
                     placeholder="Search income..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setIncomePage(1)
+                        loadUnifiedIncome(1, incomePageSize, incomeTypeFilter, searchQuery)
+                      }
+                    }}
                     className="pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-all text-sm"
                     style={{ borderColor: colors.borderLight }}
                   />
                 </div>
+                <button
+                  onClick={() => {
+                    setIncomePage(1)
+                    loadUnifiedIncome(1, incomePageSize, incomeTypeFilter, searchQuery)
+                  }}
+                  className="px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors text-sm"
+                  style={{ borderColor: colors.borderLight, color: colors.textSecondary }}
+                >
+                  Search
+                </button>
               </div>
             }
           >
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: colors.borderLight }}>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Payment ID
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Client
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Contract
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Amount
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Method
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Date
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIncome.map((payment, index) => (
-                    <motion.tr
-                      key={payment.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 + index * 0.05, duration: 0.5 }}
-                      className="border-b hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: colors.borderLight }}
-                    >
-                      <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
-                        {payment.id}
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
-                        {getClientName(payment)}
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {payment.contract_number || payment.contract || '-'}
-                      </td>
-                      <td className="py-3 px-4 font-semibold" style={{ color: colors.textPrimary }}>
-                        {formatCurrency(getPaymentAmount(payment))}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: `${colors.adminPrimary}20`,
-                            color: colors.adminPrimary,
-                          }}
-                        >
-                          {payment.method}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor:
-                              payment.status === 'SUCCESS'
-                                ? `${colors.adminSuccess}20`
-                                : payment.status === 'PENDING'
-                                  ? `${colors.adminWarning}20`
-                                  : `${colors.adminError}20`,
-                            color:
-                              payment.status === 'SUCCESS'
-                                ? colors.adminSuccess
-                                : payment.status === 'PENDING'
-                                  ? colors.adminWarning
-                                  : colors.adminError,
-                          }}
-                        >
-                          {payment.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
-                        {new Date(payment.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => router.push(`/admin/quick-management/income/${payment.id}`)}
-                            className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="View Payment Details"
+            {isLoadingIncome ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: colors.adminPrimary }} />
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b" style={{ borderColor: colors.borderLight }}>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Type
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Reference
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Client
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Amount
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Method
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Status
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Date
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm" style={{ color: colors.textSecondary }}>
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unifiedIncome.map((record, index) => {
+                        const typeBadge = getIncomeTypeBadge(record.type)
+                        return (
+                          <motion.tr
+                            key={record.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 + index * 0.02, duration: 0.3 }}
+                            className="border-b hover:bg-gray-50 transition-colors"
+                            style={{ borderColor: colors.borderLight }}
                           >
-                            <Eye size={16} style={{ color: colors.textSecondary }} />
-                          </button>
-                          {payment.contract && (
-                            <button
-                              onClick={() => router.push(`/admin/contracts/${payment.contract}`)}
-                              className="p-1.5 rounded hover:bg-gray-100 transition-colors"
-                              title="View Contract"
-                            >
-                              <FileText size={16} style={{ color: colors.textSecondary }} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            <td className="py-3 px-4">
+                              <span
+                                className="px-3 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: `${typeBadge.color}20`,
+                                  color: typeBadge.color,
+                                }}
+                              >
+                                {typeBadge.label}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-medium" style={{ color: colors.textPrimary }}>
+                              {record.source_reference}
+                            </td>
+                            <td className="py-3 px-4" style={{ color: colors.textPrimary }}>
+                              {record.client_name || '-'}
+                            </td>
+                            <td className="py-3 px-4 font-semibold" style={{ color: colors.adminSuccess }}>
+                              {formatCurrency(record.amount)}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className="px-3 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: `${colors.adminPrimary}20`,
+                                  color: colors.adminPrimary,
+                                }}
+                              >
+                                {record.method || '-'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className="px-3 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: `${getStatusColor(record.status)}20`,
+                                  color: getStatusColor(record.status),
+                                }}
+                              >
+                                {record.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4" style={{ color: colors.textSecondary }}>
+                              {record.date ? new Date(record.date).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                {record.type === 'contract_payment' && (
+                                  <button
+                                    onClick={() => router.push(`/admin/quick-management/income/${record.source_id}`)}
+                                    className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                    title="View Payment Details"
+                                  >
+                                    <Eye size={16} style={{ color: colors.textSecondary }} />
+                                  </button>
+                                )}
+                                {record.type === 'contract_deposit' && (
+                                  <button
+                                    onClick={() => router.push(`/admin/contracts/${record.source_id}`)}
+                                    className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                    title="View Contract"
+                                  >
+                                    <FileText size={16} style={{ color: colors.textSecondary }} />
+                                  </button>
+                                )}
+                                {record.type === 'job_card_payment' && (
+                                  <button
+                                    onClick={() => router.push(`/admin/garage-management/job-card/${record.source_id}`)}
+                                    className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                    title="View Job Card"
+                                  >
+                                    <Wrench size={16} style={{ color: colors.textSecondary }} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </motion.tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <Pagination
+                  currentPage={incomePage}
+                  totalCount={incomeCount}
+                  pageSize={incomePageSize}
+                  onPageChange={(page) => {
+                    setIncomePage(page)
+                    loadUnifiedIncome(page, incomePageSize, incomeTypeFilter, searchQuery)
+                  }}
+                  onPageSizeChange={(size) => {
+                    setIncomePageSize(size)
+                    setIncomePage(1)
+                    loadUnifiedIncome(1, size, incomeTypeFilter, searchQuery)
+                  }}
+                />
+              </>
+            )}
           </DashboardCard>
         </motion.div>
       </TabPanel>
